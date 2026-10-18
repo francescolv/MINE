@@ -1,0 +1,50 @@
+{
+	"format": 1,
+	"order": 7,
+	"title": "Sensors: Byte waits and remembers",
+	"reflection": "The night light works by itself, all night. Which machines in your home or at school react to a sensor, wait a while, or remember what happened?",
+	"steps": [
+		{
+			"id": "plate_door",
+			"goal": "MINE has put a pressure plate on the ground at your Byte's left, and an iron door in front of it. When someone steps on the plate, the door must open, and close by itself 3 seconds later. MINE steps on the plate to test it.",
+			"not_yet": "Not yet: when someone steps on the plate, the door must open, and close again 3 seconds later.",
+			"hints": [
+				"The plate is next to Byte: redstone.getInput(\"left\") is true while someone stands on it. os.pullEvent(\"redstone\") waits until it changes.",
+				"When the input is on: open the door with redstone.setOutput(\"front\", true), wait with os.sleep(3), then close it. All inside while true do ... end."
+			],
+			"block_hints": [
+				"\"signal from left?\" is true while someone stands on the plate. \"wait for a redstone change\" waits until it changes.",
+				"Inside \"repeat while true\": \"wait for a redstone change\", then \"if signal from left?\": \"redstone signal in front set to true\", \"wait 3 seconds\", \"redstone signal in front set to false\"."
+			],
+			"check": { "type": "plate_door" }
+		},
+		{
+			"id": "night_lamp",
+			"goal": "Now a daylight sensor on top of your Byte and a lamp behind it: make a night light, which is on only when it's dark. MINE makes night fall on the sensor, and day again, to test it.",
+			"not_yet": "Not yet: the lamp must be on when the sensor says it's dark, and off when it's light.",
+			"hints": [
+				"The sensor sends a signal when it's light: redstone.getInput(\"top\") is true by day, false when it's dark.",
+				"The lamp is the opposite of the sensor: redstone.setOutput(\"back\", not redstone.getInput(\"top\")), then os.pullEvent(\"redstone\"), inside while true do ... end."
+			],
+			"block_hints": [
+				"The \"signal from on top?\" block is true when it's light, false when it's dark.",
+				"Inside \"repeat while true\": \"redstone signal behind set to\" with \"not signal from on top?\" in it, then \"wait for a redstone change\"."
+			],
+			"check": { "type": "night_lamp" }
+		},
+		{
+			"id": "button_bridge",
+			"goal": "Last one: a button on the ground at your Byte's right, and in front a piston with a yellow walkway. Each press of the button must move the walkway out, or back in if it's out. MINE presses the button a few times.",
+			"not_yet": "Not yet: each press of the button must move the walkway out if it's in, and back in if it's out.",
+			"hints": [
+				"A button is on only for a moment: Byte must remember where the walkway is. A variable does it: local out = false, then out = not out at each press.",
+				"while true do: wait with os.pullEvent(\"redstone\"); if redstone.getInput(\"right\") then change out and send it to the piston with redstone.setOutput(\"front\", out). end"
+			],
+			"block_hints": [
+				"A button is on only for a moment: Byte remembers where the walkway is in a variable. \"set out to false\", then \"set out to not out\" at each press.",
+				"Inside \"repeat while true\": \"wait for a redstone change\", then \"if signal from right?\": \"set out to not out\" and \"redstone signal in front set to out\"."
+			],
+			"check": { "type": "button_bridge" }
+		}
+	]
+}

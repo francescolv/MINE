@@ -1,0 +1,23 @@
+{
+	"_comment": "Mods of the MINE modpack, pinned to exact files (Modrinth). Change versions here and in gradle.properties together.",
+	"mods": [
+		{
+			"name": "fabric-api",
+			"version": "0.162.0+26.3",
+			"path": "mods/fabric-api-0.162.0+26.3.jar",
+			"url": "https://cdn.modrinth.com/data/P7dR8mSH/versions/v2j28coa/fabric-api-0.162.0%2B26.3.jar",
+			"size": 1772377,
+			"sha1": "273cd2dcbd92d1559edcc91c9f23fee47f6ff93f",
+			"sha512": "5ab70908952f1d2346d16b122ca31327f4055db59c279a1bc3c3c581ce359bb541cba15730f55b0727be7c7c4debc4a4412a183c228e0d4dea81c734f7b412ce"
+		},
+		{
+			"name": "cc-tweaked",
+			"version": "1.120.3",
+			"path": "mods/cc-tweaked-26.3-fabric-1.120.3.jar",
+			"url": "https://cdn.modrinth.com/data/gu7yAYhd/versions/tKLY4fAR/cc-tweaked-26.3-fabric-1.120.3.jar",
+			"size": 3036093,
+			"sha1": "689994db404b21e8922ed2acd0cd999e585d470c",
+			"sha512": "6ad51c9d0c8f6344df965bc016ab3c8d324af7e40316107339dc91d14a931fcf134b80c174d94de925004219200ca750101a8556955a9150a13872dc10a8389a"
+		}
+	]
+}

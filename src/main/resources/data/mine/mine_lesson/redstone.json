@@ -1,0 +1,50 @@
+{
+	"format": 1,
+	"order": 6,
+	"title": "Redstone: Byte listens and switches on",
+	"reflection": "Where in real life do you find an input and an output like Byte's levers and lamp? Think of a device that needs two things at once (AND) to work.",
+	"steps": [
+		{
+			"id": "lamp",
+			"goal": "MINE has put a redstone lamp behind your Byte, an iron door in front of it and a lever on each side. Write a program that switches on the lamp behind Byte.",
+			"not_yet": "Not yet: when your program ends, the lamp behind Byte must be on.",
+			"hints": [
+				"redstone.setOutput(side, true) sends a redstone signal from one side of Byte: \"back\", \"front\", \"left\", \"right\", \"top\", \"bottom\".",
+				"The lamp is behind Byte: redstone.setOutput(\"back\", true)."
+			],
+			"block_hints": [
+				"In the Redstone group, \"redstone signal [side] set to true\" sends a signal from one side of Byte.",
+				"The lamp is behind Byte: \"redstone signal behind set to true\"."
+			],
+			"check": { "type": "redstone_lamp" }
+		},
+		{
+			"id": "door",
+			"goal": "Make the door follow the left lever: open when the lever is on, closed when it's off. When your program is listening, MINE pulls the lever a few times to test it.",
+			"not_yet": "Not yet: the door must open when the left lever is on and close when it's off, every time.",
+			"hints": [
+				"redstone.getInput(\"left\") is true when the left lever is on. Send the same value to the door, in front: redstone.setOutput(\"front\", ...).",
+				"Repeat forever: while true do ... os.pullEvent(\"redstone\") end. os.pullEvent(\"redstone\") waits until a redstone signal changes."
+			],
+			"block_hints": [
+				"\"signal from left?\" is true when the left lever is on. Put it in \"redstone signal in front set to ...\", for the door.",
+				"Repeat forever: \"repeat while true\", and at the end of it \"wait for a redstone change\"."
+			],
+			"check": { "type": "lever_door" }
+		},
+		{
+			"id": "and",
+			"goal": "Now both levers: the lamp behind Byte must be on only when the left lever AND the right lever are on. MINE will try all four ways.",
+			"not_yet": "Not yet: the lamp must be on only when both levers are on.",
+			"hints": [
+				"a and b is true only when a and b are both true: redstone.getInput(\"left\") and redstone.getInput(\"right\").",
+				"Inside while true do ... end: send that value to the lamp, behind, then wait with os.pullEvent(\"redstone\")."
+			],
+			"block_hints": [
+				"In Logic, the \"and\" block is true only when both sides are true: \"signal from left?\" and \"signal from right?\".",
+				"Inside \"repeat while true\": \"redstone signal behind set to\" with that block, then \"wait for a redstone change\"."
+			],
+			"check": { "type": "lever_and" }
+		}
+	]
+}

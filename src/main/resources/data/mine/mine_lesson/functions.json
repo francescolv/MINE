@@ -1,0 +1,54 @@
+{
+	"format": 1,
+	"order": 5,
+	"title": "Variables and functions",
+	"reflection": "In the pyramid, the function square(side) did three different jobs. How many lines did it save you? What else could you build with it?",
+	"steps": [
+		{
+			"id": "count",
+			"goal": "MINE has built a wall in front of Byte, at a distance you don't know. Write a program that takes Byte up to the wall and makes it say how many steps it took.",
+			"not_yet": "Not yet: Byte has to stop right in front of the wall and say how many steps it took.",
+			"hints": [
+				"A variable remembers a number: local steps = 0 at the start, then steps = steps + 1 every time Byte moves forward.",
+				"Walk with while not byte.detect() do ... end, as in the conditions lesson. At the end: mine.say(\"I took \" .. steps .. \" steps\")."
+			],
+			"block_hints": [
+				"In Variables, create a variable steps: \"set steps to 0\" at the start, then \"change steps by 1\" every time Byte moves forward.",
+				"Walk with \"repeat while\" and \"not block in front?\" in it, as in the conditions lesson. At the end use \"say\" with \"create text with\" in it: \"I took \", steps, \" steps\"."
+			],
+			"check": { "type": "count_to_wall", "min_distance": 3, "max_distance": 8 }
+		},
+		{
+			"id": "square",
+			"goal": "Each time your program starts, MINE chooses how big a square it wants: local side = mine.challenge() tells you. Build a solid square floor of that size.",
+			"block_goal": "Each time your program starts, MINE chooses how big a square it wants: the challenge's number block tells you. Build a solid square floor of that size.",
+			"not_yet": "Not yet: build a solid square floor as big as mine.challenge() asks.",
+			"hints": [
+				"It's the floor of the loops lesson, with side instead of the numbers: for row = 1, side do ... end and for i = 1, side do ... end.",
+				"To see what MINE asks, make Byte say it: mine.say(\"Side: \" .. side)."
+			],
+			"block_hints": [
+				"It's the floor of the loops lesson: \"set side to\" with \"the challenge's number\" in it, then put side in every \"repeat\" instead of the numbers.",
+				"To see what MINE asks, make Byte say it: \"say\" with \"create text with\" \"Side: \" and side in it."
+			],
+			"give": { "item": "minecraft:oak_planks", "count": 64 },
+			"check": { "type": "square_of_challenge", "min_side": 2, "max_side": 5 }
+		},
+		{
+			"id": "pyramid",
+			"goal": "Build a step pyramid: a 5 × 5 square, a 3 × 3 square on top of it, and one block on the very top. Write a function square(side) and use it three times.",
+			"block_goal": "Build a step pyramid: a 5 × 5 square, a 3 × 3 square on top of it, and one block on the very top. Make a function square with a parameter side, and use it three times.",
+			"not_yet": "Not yet: the pyramid is a solid 5 × 5 square, then a 3 × 3 square centred on top of it, then one block on top: 35 blocks.",
+			"hints": [
+				"function square(side) ... end gives a name to your square program: then square(5), square(3) and square(1) build the three layers. Make the function bring Byte back to the corner where it started.",
+				"Between two layers: go up one block, move forward one, turn right, move forward one and turn left. Then the next square is centred."
+			],
+			"block_hints": [
+				"In Functions, take \"to do something\" and call it square; with ⚙ add an input side. Put your square inside: then \"square with side\" 5, 3 and 1 builds the three layers. Make it bring Byte back to the corner where it started.",
+				"Between two layers: \"move up\", \"move forward\", \"turn right\", \"move forward\", \"turn left\". Then the next square is centred."
+			],
+			"give": { "item": "minecraft:oak_planks", "count": 64 },
+			"check": { "type": "pyramid", "base": 5 }
+		}
+	]
+}

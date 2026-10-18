@@ -1,0 +1,24 @@
+{
+	"format": 1,
+	"name": "Ada",
+	"pages": {
+		"en_us": [
+			"Hi! I'm Ada, I help with loops.\n\nA loop repeats instructions: you write them once, Byte does them many times.",
+			"@lesson none\nReady to build with loops?\n\n[Start the lesson](/mine lesson start loops)",
+			"@lesson loops 1\nStep 1: a row of 10 blocks.\n\nWhat is INSIDE the loop is repeated: place a block, then move forward.\n\n[A hint](/mine lesson hint)",
+			"@lesson loops 2\nStep 2: a floor.\n\nA floor is rows, one after the other: a loop inside a loop!\n\n[A hint](/mine lesson hint)",
+			"@lesson loops 3\nStep 3: a cube.\n\nA cube is floors, one on top of the other: a third loop.\n\n[A hint](/mine lesson hint)",
+			"@done loops\nWell done! A question:\n\nfor i = 1, 4 do\n for j = 1, 5 do\n  place()\n\nHow many blocks?\n[ ] 9\n[x] 20\n[ ] 45",
+			"@done loops\nWhat was the hardest?\n[ ] the row\n[ ] the floor\n[ ] the cube"
+		],
+		"it_it": [
+			"Ciao! Sono Ada, ti aiuto con i cicli.\n\nUn ciclo ripete le istruzioni: le scrivi una volta, Byte le fa tante volte.",
+			"@lesson none\nPronto a costruire con i cicli?\n\n[Inizia la lezione](/mine lesson start loops)",
+			"@lesson loops 1\nTappa 1: una fila di 10 blocchi.\n\nQuello che è DENTRO il ciclo si ripete: metti un blocco, poi vai avanti.\n\n[Un suggerimento](/mine lesson hint)",
+			"@lesson loops 2\nTappa 2: un pavimento.\n\nUn pavimento è fatto di file, una dopo l'altra: un ciclo dentro un ciclo!\n\n[Un suggerimento](/mine lesson hint)",
+			"@lesson loops 3\nTappa 3: un cubo.\n\nUn cubo è fatto di pavimenti, uno sopra l'altro: un terzo ciclo.\n\n[Un suggerimento](/mine lesson hint)",
+			"@done loops\nBravo! Una domanda:\n\nfor i = 1, 4 do\n for j = 1, 5 do\n  metti()\n\nQuanti blocchi?\n[ ] 9\n[x] 20\n[ ] 45",
+			"@done loops\nCosa è stato più difficile?\n[ ] la fila\n[ ] il pavimento\n[ ] il cubo"
+		]
+	}
+}

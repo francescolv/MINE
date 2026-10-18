@@ -1,0 +1,32 @@
+{
+	"schemaVersion": 1,
+	"id": "mine-gametest",
+	"version": "0.0.0",
+	"name": "MINE GameTest",
+	"description": "Automated in-game tests for MINE (development only).",
+	"license": "Apache-2.0",
+	"environment": "*",
+	"entrypoints": {
+		"fabric-gametest": [
+			"io.github.francescolv.mine.gametest.AgentGameTest",
+			"io.github.francescolv.mine.gametest.LessonGameTest",
+			"io.github.francescolv.mine.gametest.MissionGameTest",
+			"io.github.francescolv.mine.gametest.NpcGameTest",
+			"io.github.francescolv.mine.gametest.BoardGameTest",
+			"io.github.francescolv.mine.gametest.PortfolioGameTest",
+			"io.github.francescolv.mine.gametest.LabGameTest",
+			"io.github.francescolv.mine.gametest.ClassCodeGameTest",
+			"io.github.francescolv.mine.gametest.DataFormatGameTest",
+			"io.github.francescolv.mine.gametest.BlockEditorGameTest",
+			"io.github.francescolv.mine.gametest.WorldGameTest",
+			"io.github.francescolv.mine.gametest.ZoneGameTest",
+			"io.github.francescolv.mine.gametest.DeviceGameTest",
+			"io.github.francescolv.mine.gametest.PythonGameTest"
+		]
+	},
+	"depends": {
+		"mine": "*",
+		"computercraft": "*",
+		"fabric-gametest-api-v1": "*"
+	}
+}

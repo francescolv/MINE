@@ -1,0 +1,76 @@
+{
+	"blocks": {
+		"languageVersion": 0,
+		"blocks": [
+			{
+				"type": "mine_move",
+				"fields": {
+					"WAY": "up"
+				},
+				"next": {
+					"block": {
+						"type": "controls_repeat_ext",
+						"inputs": {
+							"TIMES": {
+								"block": {
+									"type": "math_number",
+									"fields": {
+										"NUM": 8
+									}
+								}
+							},
+							"DO": {
+								"block": {
+									"type": "mine_move",
+									"fields": {
+										"WAY": "forward"
+									},
+									"next": {
+										"block": {
+											"type": "controls_if",
+											"inputs": {
+												"IF0": {
+													"block": {
+														"type": "mine_compare",
+														"fields": {
+															"WHERE": "Down"
+														}
+													}
+												},
+												"DO0": {
+													"block": {
+														"type": "mine_dig",
+														"fields": {
+															"WHERE": "Down"
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						},
+						"next": {
+							"block": {
+								"type": "mine_say",
+								"inputs": {
+									"TEXT": {
+										"block": {
+											"type": "text",
+											"fields": {
+												"TEXT": "All the gold is mine!"
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"x": 20,
+				"y": 20
+			}
+		]
+	}
+}

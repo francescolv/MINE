@@ -1,0 +1,63 @@
+{
+	"format": 1,
+	"order": 11,
+	"title": "Treasure hunt: coordinates",
+	"reflection": "Byte found treasure it couldn't see, with just some numbers. Where are coordinates like these used in real life (maps, GPS, battleships)? Why did Byte need variables to get home?",
+	"steps": [
+		{
+			"id": "map",
+			"goal": "MINE has buried a treasure (a gold block) in the ground near Byte, in a new place every time. mine.challenge() says where: so many blocks forward, then so many to the right. Bring Byte right on top of it.",
+			"not_yet": "Not yet: Byte has to stop right on top of the treasure.",
+			"hints": [
+				"local forward, right = mine.challenge() puts the two numbers in two variables. mine.say them to see them!",
+				"for i = 1, forward do byte.forward() end, then byte.turnRight(), then the same with right."
+			],
+			"block_hints": [
+				"\"the challenge's number 1\" is how far forward, \"the challenge's number 2\" how far to the right. Keep them in two variables (Variables, \"set ... to\").",
+				"\"repeat\" with the variable forward in it: \"move forward\". Then \"turn right\", and the same with right."
+			],
+			"check": {
+				"type": "treasure",
+				"count": 1
+			}
+		},
+		{
+			"id": "dig",
+			"goal": "Now dig the treasure up (Byte digs the block under it with byte.digDown()) and bring Byte back home, where it started.",
+			"not_yet": "Not yet: dig up the treasure, then bring Byte back where it started.",
+			"hints": [
+				"Your variables still remember how far Byte went: they are the way home too.",
+				"After byte.digDown(): right times byte.back(), byte.turnLeft(), forward times byte.back()."
+			],
+			"block_hints": [
+				"Your variables still remember how far Byte went: they are the way home too.",
+				"After \"dig below\": \"repeat\" right times \"move back\", \"turn left\", \"repeat\" forward times \"move back\"."
+			],
+			"check": {
+				"type": "treasure",
+				"count": 1,
+				"dig": true,
+				"home": true
+			}
+		},
+		{
+			"id": "three",
+			"goal": "Three treasures! mine.challenge() gives 6 numbers: forward and right of the first, of the second, of the third. Dig them all up and come back home. Byte has to remember where it is.",
+			"not_yet": "Not yet: dig up all three treasures, then bring Byte back where it started.",
+			"hints": [
+				"Two variables, f and r, say where Byte is (they start at 0). A function goTo(toF, toR) moves Byte there: while f < toF go forward and add 1 to f; while f > toF go back and take 1 away; then the same to the right.",
+				"for i = 1, 3 do goTo(mine.challenge(2 * i - 1), mine.challenge(2 * i)) byte.digDown() end, then goTo(0, 0) brings Byte home."
+			],
+			"block_hints": [
+				"Two variables, f and r, say where Byte is (start them at 0). In Functions, make \"goTo\" with two inputs, toF and toR: \"repeat while f < toF\": \"move forward\", \"change f by 1\"; \"repeat while f > toF\": \"move back\", \"change f by -1\"; then the same to the right.",
+				"Call goTo with \"the challenge's number 1\" and \"2\", then \"dig below\"; then with 3 and 4, and 5 and 6. Last, goTo 0, 0 brings Byte home."
+			],
+			"check": {
+				"type": "treasure",
+				"count": 3,
+				"dig": true,
+				"home": true
+			}
+		}
+	]
+}

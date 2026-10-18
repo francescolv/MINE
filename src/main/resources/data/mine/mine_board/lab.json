@@ -1,0 +1,18 @@
+{
+	"format": 1,
+	"size": 3,
+	"text": {
+		"en_us": [
+			"# MINE lab",
+			"Stay in your lane.",
+			"Build in front of your Byte.",
+			"Stuck? Ask Ada, at the entrance."
+		],
+		"it_it": [
+			"# Laboratorio MINE",
+			"Resta nella tua corsia.",
+			"Costruisci davanti al tuo Byte.",
+			"Bloccato? Chiedi ad Ada, all'ingresso."
+		]
+	}
+}

@@ -1,0 +1,24 @@
+{
+	"format": 1,
+	"size": 2,
+	"text": {
+		"en_us": [
+			"# Loops",
+			"for i = 1, 10 do",
+			"  turtle.placeDown()",
+			"  turtle.forward()",
+			"end",
+			"",
+			"row → floor → cube"
+		],
+		"it_it": [
+			"# I cicli",
+			"for i = 1, 10 do",
+			"  turtle.placeDown()",
+			"  turtle.forward()",
+			"end",
+			"",
+			"fila → pavimento → cubo"
+		]
+	}
+}

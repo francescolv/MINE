@@ -1,0 +1,76 @@
+{
+	"format": 1,
+	"order": 10,
+	"title": "The maze: a hand on the wall",
+	"reflection": "Your program got Byte out of mazes it had never seen. Why does keeping a hand on the wall always work? When wouldn't it?",
+	"steps": [
+		{
+			"id": "corridor",
+			"goal": "MINE has built a winding corridor in front of Byte, different every time, with a gold block at its end. Bring Byte right in front of the gold, walking only along the corridor.",
+			"not_yet": "Not yet: Byte has to stop right in front of the gold, without climbing or breaking the walls.",
+			"hints": [
+				"MINE has put a gold block in the highlighted slot: byte.compare() is true when the block in front is gold. while not byte.compare() do ... end repeats until Byte faces it.",
+				"Inside the loop: if not byte.detect() then go forward; else turn right, and if there's a wall there too (and it isn't the gold), turn left twice."
+			],
+			"block_hints": [
+				"MINE has put a gold block in the highlighted slot: \"block in front same as the slot's?\" is true when Byte faces the gold. Use \"repeat until\" with it.",
+				"Inside: an \"if\" with \"not block in front?\": \"move forward\"; else \"turn right\", and if \"block in front?\" and not the gold, \"turn left\" twice."
+			],
+			"give": {
+				"item": "minecraft:gold_block",
+				"count": 1
+			},
+			"check": {
+				"type": "maze",
+				"width": 3,
+				"depth": 5,
+				"corridor": true
+			}
+		},
+		{
+			"id": "maze",
+			"goal": "Now it's a real maze, with dead ends, and a new one every time. Get Byte out: right in front of the gold, without climbing or digging.",
+			"not_yet": "Not yet: Byte has to stop right in front of the gold, walking only along the corridors.",
+			"hints": [
+				"Keep your right hand on the wall and you'll get out of any maze like this one: at every step, turn right; while there's a wall in front (that isn't the gold), turn left; then one step forward.",
+				"while not byte.compare() do: byte.turnRight(), then while byte.detect() and not byte.compare() do byte.turnLeft() end, then if not byte.compare() then byte.forward() end."
+			],
+			"block_hints": [
+				"Keep your right hand on the wall and you'll get out of any maze like this one: at every step, turn right; while there's a wall in front (that isn't the gold), turn left; then one step forward.",
+				"\"repeat until\" the gold: \"turn right\"; \"repeat while\" \"block in front?\" and not the gold: \"turn left\"; if not the gold: \"move forward\"."
+			],
+			"give": {
+				"item": "minecraft:gold_block",
+				"count": 1
+			},
+			"check": {
+				"type": "maze",
+				"width": 3,
+				"depth": 6
+			}
+		},
+		{
+			"id": "steps",
+			"goal": "Get Byte out of a new maze again, and at the gold make it say how many steps it took. Count them with a variable: MINE counts them too.",
+			"not_yet": "Not yet: Byte has to stop in front of the gold and say how many steps it took.",
+			"hints": [
+				"Before the loop, local steps = 0. Each time Byte goes forward, steps = steps + 1.",
+				"At the end: mine.say(\"I took \" .. steps .. \" steps\"). The .. joins texts and numbers."
+			],
+			"block_hints": [
+				"In Variables, make a variable \"steps\". Before the loop, \"set steps to 0\"; after \"move forward\", \"change steps by 1\".",
+				"At the end, \"say\" with \"create text with\": \"I took \", steps, \" steps\"."
+			],
+			"give": {
+				"item": "minecraft:gold_block",
+				"count": 1
+			},
+			"check": {
+				"type": "maze",
+				"width": 3,
+				"depth": 6,
+				"say_steps": true
+			}
+		}
+	]
+}

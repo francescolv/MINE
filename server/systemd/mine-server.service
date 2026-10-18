@@ -1,0 +1,24 @@
+[Unit]
+Description=MINE Minecraft server (Fabric)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=mine
+WorkingDirectory=@DIR@
+# The console: a FIFO that mine-cmd writes into. The service makes it and opens it itself
+# (read-write, so it never sees an end of file): a systemd socket unit can't, because SELinux on
+# Fedora doesn't let systemd open a FIFO in /run.
+RuntimeDirectory=mine-server
+RuntimeDirectoryMode=0700
+ExecStart=/bin/sh -c '[ -p /run/mine-server/console ] || mkfifo -m 600 /run/mine-server/console; exec @JAVA@ -Xms1G -Xmx@MEMORY@ -jar fabric-server-launch.jar nogui 0<>/run/mine-server/console'
+StandardOutput=journal
+StandardError=journal
+# A clean stop: the server saves the world before closing.
+ExecStop=/bin/sh -c 'echo stop > /run/mine-server/console; while kill -0 $MAINPID 2>/dev/null; do sleep 1; done'
+TimeoutStopSec=120
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

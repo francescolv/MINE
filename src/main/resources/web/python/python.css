@@ -1,0 +1,113 @@
+/* MINE's Python editor: the block editor's bar and lesson line (editor.css), code on the left, what the program prints on the right. */
+.kind {
+	font-weight: bold;
+	color: #ffd43b;
+}
+main.python {
+	flex: 1;
+	display: flex;
+	min-height: 0;
+}
+#editor {
+	flex: 3;
+	min-width: 0;
+	display: flex;
+}
+#editor .CodeMirror {
+	flex: 1;
+	height: auto;
+	font: 15px/1.5 ui-monospace, "JetBrains Mono", "DejaVu Sans Mono", Menlo, monospace;
+}
+.CodeMirror .error-line {
+	background: #ffe3dd;
+}
+#output-pane {
+	flex: 2;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	background: var(--code-bg);
+	color: var(--code-text);
+}
+.output-head {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 8px;
+	padding: 8px 12px;
+}
+.output-head h2 {
+	margin: 0;
+	font-size: 0.9em;
+	font-weight: normal;
+	opacity: 0.7;
+}
+#timing {
+	font-size: 0.8em;
+	opacity: 0.7;
+}
+#output {
+	flex: 1;
+	margin: 0;
+	padding: 0 12px 12px;
+	overflow: auto;
+	font: 14px/1.5 ui-monospace, "DejaVu Sans Mono", Menlo, monospace;
+	white-space: pre-wrap;
+}
+#output .err {
+	color: #ff9e8a;
+}
+#output .explain {
+	color: #ffd43b;
+}
+#output .note {
+	color: #9aa6b8;
+	font-style: italic;
+}
+@media (max-width: 700px) {
+	main.python {
+		flex-direction: column;
+	}
+	#output-pane {
+		max-height: 40%;
+	}
+}
+#thonny-dialog {
+	max-width: 36em;
+	border: 0;
+	border-radius: 10px;
+	padding: 18px 22px;
+	line-height: 1.5;
+	box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+}
+#thonny-dialog::backdrop {
+	background: rgba(0, 0, 0, 0.45);
+}
+#thonny-dialog h2 {
+	margin: 0 0 8px;
+	font-size: 1.2em;
+}
+#thonny-dialog code {
+	background: #eef2f7;
+	padding: 0 4px;
+	border-radius: 4px;
+}
+.thonny-code {
+	font-size: 1.1em;
+}
+#thonny-code {
+	font-family: ui-monospace, "DejaVu Sans Mono", monospace;
+	font-size: 1.3em;
+	letter-spacing: 0.15em;
+	color: #2d6a1f;
+}
+.thonny-buttons {
+	display: flex;
+	gap: 10px;
+	justify-content: flex-end;
+}
+a.button-link.primary {
+	background: var(--accent);
+	color: #ffffff;
+	font-weight: bold;
+}

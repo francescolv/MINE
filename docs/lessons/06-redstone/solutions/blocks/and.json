@@ -1,0 +1,66 @@
+{
+	"blocks": {
+		"languageVersion": 0,
+		"blocks": [
+			{
+				"type": "controls_whileUntil",
+				"fields": {
+					"MODE": "WHILE"
+				},
+				"inputs": {
+					"BOOL": {
+						"block": {
+							"type": "logic_boolean",
+							"fields": {
+								"BOOL": "TRUE"
+							}
+						}
+					},
+					"DO": {
+						"block": {
+							"type": "mine_set_signal",
+							"fields": {
+								"SIDE": "back"
+							},
+							"inputs": {
+								"ON": {
+									"block": {
+										"type": "logic_operation",
+										"fields": {
+											"OP": "AND"
+										},
+										"inputs": {
+											"A": {
+												"block": {
+													"type": "mine_get_signal",
+													"fields": {
+														"SIDE": "left"
+													}
+												}
+											},
+											"B": {
+												"block": {
+													"type": "mine_get_signal",
+													"fields": {
+														"SIDE": "right"
+													}
+												}
+											}
+										}
+									}
+								}
+							},
+							"next": {
+								"block": {
+									"type": "mine_wait_signal"
+								}
+							}
+						}
+					}
+				},
+				"x": 20,
+				"y": 20
+			}
+		]
+	}
+}

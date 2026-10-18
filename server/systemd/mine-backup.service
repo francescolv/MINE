@@ -1,0 +1,6 @@
+[Unit]
+Description=Backup of the MINE world
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/mine-backup

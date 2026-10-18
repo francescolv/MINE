@@ -1,0 +1,50 @@
+{
+	"format": 1,
+	"order": 8,
+	"title": "The board: from your desk into the world",
+	"reflection": "Your button opened a door in the game, and a lever in the game lit up your board. Where in real life does a button, a sensor or a light talk to a computer far away?",
+	"steps": [
+		{
+			"id": "board_door",
+			"goal": "MINE has put an iron door in front of your Byte. When you press A on your board (it writes pulsante_a:1), the door must open, and close by itself 3 seconds later. Connect the board with /mine device to try it; MINE presses A on your board to test it.",
+			"not_yet": "Not yet: when the board writes pulsante_a:1, the door must open, and close again 3 seconds later.",
+			"hints": [
+				"mine.device.wait(\"pulsante_a\") stops Byte until the board writes pulsante_a. Then open the door with redstone.setOutput(\"front\", true).",
+				"Inside while true do ... end: mine.device.wait(\"pulsante_a\"), redstone.setOutput(\"front\", true), os.sleep(3), redstone.setOutput(\"front\", false)."
+			],
+			"block_hints": [
+				"In the Board category, \"wait for pulsante_a from the board\" stops Byte until you press A. Then \"redstone signal in front set to true\".",
+				"Inside \"repeat while true\": \"wait for pulsante_a from the board\", \"redstone signal in front set to true\", \"wait 3 seconds\", \"redstone signal in front set to false\"."
+			],
+			"check": { "type": "board_door" }
+		},
+		{
+			"id": "board_lamp",
+			"goal": "Now a lamp behind your Byte. The board measures the light in your classroom and writes it (luce:0 is dark, luce:255 very bright). Make a night light: the lamp is on only when the light is below 50. Cover the board with your hand to try it; MINE plays the light to test it.",
+			"not_yet": "Not yet: the lamp must be on when luce is below 50, and off when it's 50 or more.",
+			"hints": [
+				"mine.device.read(\"luce\") is the last light the board wrote. A comparison, mine.device.read(\"luce\") < 50, is true when it's dark.",
+				"Inside while true do ... end: redstone.setOutput(\"back\", mine.device.read(\"luce\") < 50), then os.sleep(0.5) so Byte doesn't check without stopping."
+			],
+			"block_hints": [
+				"\"board value luce\" is the last light the board wrote. Put it in a comparison from Logic: \"board value luce < 50\" is true when it's dark.",
+				"Inside \"repeat while true\": \"redstone signal behind set to\" with \"board value luce < 50\" in it, then \"wait 0.5 seconds\"."
+			],
+			"check": { "type": "board_lamp" }
+		},
+		{
+			"id": "board_heart",
+			"goal": "Last one, the other way: a lever on the ground at your Byte's left. When the lever is on, the heart on your board lights up: Byte writes cuore:1 on the board, and cuore:0 when the lever goes back. MINE pulls the lever to test it.",
+			"not_yet": "Not yet: with the lever on Byte must write cuore:1 on the board, and cuore:0 when it's off.",
+			"hints": [
+				"The lever is next to Byte: redstone.getInput(\"left\") is true while it's on. os.pullEvent(\"redstone\") waits until it changes.",
+				"Inside while true do ... end: os.pullEvent(\"redstone\"), then if redstone.getInput(\"left\") then mine.device.send(\"cuore\", 1) else mine.device.send(\"cuore\", 0) end."
+			],
+			"block_hints": [
+				"\"signal from left?\" is true while the lever is on. \"send to the board cuore 1\" is in the Board category.",
+				"Inside \"repeat while true\": \"wait for a redstone change\", then \"if signal from left?\": \"send to the board cuore 1\", else \"send to the board cuore 0\"."
+			],
+			"check": { "type": "board_heart" }
+		}
+	]
+}

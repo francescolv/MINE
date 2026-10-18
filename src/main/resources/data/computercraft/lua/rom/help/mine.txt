@@ -1,0 +1,35 @@
+mine is the MINE API, available on Byte (and on every turtle).
+Use it together with byte, Byte's moves (see "help byte").
+
+Functions in the mine API:
+mine.say( message )
+  Byte writes the message in chat, and in its terminal too.
+  Players within 32 blocks can read it.
+mine.owner()
+  The name of the student who owns Byte (nil if it has no owner).
+mine.challenge()
+  What your lesson step asks this time (e.g. the side of a square).
+  It changes every time the program starts: nil if nothing is asked.
+  More numbers: local a, b = mine.challenge(); mine.challenge(2) is the 2nd.
+mine.version()
+  The MINE version installed on the server.
+
+mine.device: the board (micro:bit, Arduino) on your PC,
+connected with /mine device. It writes lines key:value.
+mine.device.read( key )
+  The last value of key (0 if it never came).
+mine.device.wait( [key] )
+  Waits for key (or any key): returns key, value.
+mine.device.send( key, value )
+  Writes key:value to the board.
+mine.device.connected()
+  true if a board is connected.
+
+Byte has a diamond pickaxe: byte.dig(), byte.digUp() and
+byte.digDown() break blocks and put them in its inventory.
+
+From chat, /mine byte run <program> starts one of Byte's programs
+without opening its terminal, so you can watch it work.
+
+Example:
+mine.say("Hi! I'm " .. mine.owner() .. "'s Byte.")

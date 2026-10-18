@@ -1,0 +1,85 @@
+{
+	"blocks": {
+		"languageVersion": 0,
+		"blocks": [
+			{
+				"type": "mine_place",
+				"fields": {
+					"WHERE": ""
+				},
+				"next": {
+					"block": {
+						"type": "mine_move",
+						"fields": {
+							"WAY": "up"
+						},
+						"next": {
+							"block": {
+								"type": "mine_place",
+								"fields": {
+									"WHERE": ""
+								},
+								"next": {
+									"block": {
+										"type": "mine_move",
+										"fields": {
+											"WAY": "up"
+										},
+										"next": {
+											"block": {
+												"type": "mine_place",
+												"fields": {
+													"WHERE": ""
+												},
+												"next": {
+													"block": {
+														"type": "controls_repeat_ext",
+														"inputs": {
+															"TIMES": {
+																"block": {
+																	"type": "math_number",
+																	"fields": {
+																		"NUM": 2
+																	}
+																}
+															},
+															"DO": {
+																"block": {
+																	"type": "mine_move",
+																	"fields": {
+																		"WAY": "down"
+																	}
+																}
+															}
+														},
+														"next": {
+															"block": {
+																"type": "mine_say",
+																"inputs": {
+																	"TEXT": {
+																		"block": {
+																			"type": "text",
+																			"fields": {
+																				"TEXT": "Torre finita!"
+																			}
+																		}
+																	}
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"x": 20,
+				"y": 20
+			}
+		]
+	}
+}

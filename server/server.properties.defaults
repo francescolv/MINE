@@ -1,0 +1,24 @@
+# MINE: settings for a school server (Minecraft Java + Fabric).
+# A flat world in Creative, no monsters: room to build and program the Agents.
+motd=MINE - school lab
+level-name=world
+level-type=minecraft\:flat
+generate-structures=false
+gamemode=creative
+force-gamemode=true
+difficulty=peaceful
+spawn-monsters=false
+pvp=false
+allow-nether=false
+spawn-protection=0
+# Command blocks: only teachers place and write them; students press their buttons and levers.
+enable-command-block=true
+# Only the class: students join with the class code (/mine class code), or "whitelist add <name>".
+white-list=true
+enforce-whitelist=true
+# Real Minecraft accounts (strategy A: Minecraft Java licences are needed).
+online-mode=true
+max-players=40
+view-distance=8
+simulation-distance=6
+server-port=25565

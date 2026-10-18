@@ -1,0 +1,32 @@
+# Gradle
+.gradle/
+build/
+out/
+!gradle/wrapper/gradle-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.classpath
+.project
+.settings/
+bin/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Fabric / Minecraft run environment
+run/
+
+# Private reference material
+ispirazione/
+
+# Documents generated from the Markdown guides (e.g. with pandoc): build them when needed
+docs/**/*.pdf
+
+# Private history (old roadmap and notes): kept for us, not published
+storico/

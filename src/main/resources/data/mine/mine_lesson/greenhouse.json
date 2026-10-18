@@ -1,0 +1,47 @@
+{
+	"format": 1,
+	"order": 12,
+	"title": "Python: the connected greenhouse (Pico 2 W)",
+	"reflection": "Your greenhouse measured, decided and sent back a summary by itself, over Wi-Fi. Which devices around you work like this (a thermostat, a weather station, a smartwatch)? What data do they send, and to whom?",
+	"steps": [
+		{
+			"id": "average",
+			"goal": "In Python. The Pico 2 W in the greenhouse sends its temperature over Wi-Fi with the key temperatura (MINE plays it to test). Collect 6 temperatures in a list, then make Byte say their average.",
+			"not_yet": "Not yet: collect 6 temperatures and make Byte say their average.",
+			"hints": [
+				"key, value = mine.device.wait(\"temperatura\") waits for the next temperature. In a for loop of 6, temperatures.append(value).",
+				"sum(temperatures) / len(temperatures) is the average; round(average, 1) keeps one decimal. Then mine.say(\"Average: \" + str(...))."
+			],
+			"check": {
+				"type": "greenhouse_average",
+				"count": 6
+			}
+		},
+		{
+			"id": "alarm",
+			"goal": "The alarm: every time a temperature arrives, Byte tells the Pico allarme:1 if it's above 30 degrees, else allarme:0 (the Pico lights its LED). Keep the program listening; MINE plays the temperatures to test it.",
+			"not_yet": "Not yet: for each temperature the Pico must get allarme:1 above 30, allarme:0 otherwise.",
+			"hints": [
+				"while True: wait for a temperature, then mine.device.send(\"allarme\", 1) or mine.device.send(\"allarme\", 0).",
+				"Above 30 means > 30: at exactly 30 it's still allarme:0."
+			],
+			"check": {
+				"type": "greenhouse_alarm",
+				"threshold": 30
+			}
+		},
+		{
+			"id": "report",
+			"goal": "The report: every 5 temperatures, Byte sends their average back to the Pico as media (for example media:24.6), and starts a new group. Keep the program listening.",
+			"not_yet": "Not yet: after every 5 temperatures the Pico must get their average as media.",
+			"hints": [
+				"Keep the temperatures in a list group; when len(group) == 5, send the average with mine.device.send(\"media\", ...).",
+				"After sending, group = [] starts a new group of 5."
+			],
+			"check": {
+				"type": "greenhouse_report",
+				"every": 5
+			}
+		}
+	]
+}

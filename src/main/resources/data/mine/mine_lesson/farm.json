@@ -1,0 +1,77 @@
+{
+	"format": 1,
+	"order": 15,
+	"title": "The farm: rows and fields",
+	"reflection": "Byte sowed and harvested a whole field with a few lines, a loop inside a loop. Where do farmers really use machines that follow a program? What would you add to Byte's to make it a better farmer?",
+	"steps": [
+		{
+			"id": "sow",
+			"goal": "MINE has dug a field in front of Byte: 3 rows of 5 farmland blocks, with water on the left. Byte flies one block above the field (byte.up() first) and sows it all with the wheat seeds in its highlighted slot (byte.placeDown()).",
+			"not_yet": "Not yet: every farmland block of the field needs seeds.",
+			"hints": [
+				"A row: 5 times byte.forward() and byte.placeDown(). Then back to the start of the row (5 times byte.back()) and over to the next one: byte.turnRight(), byte.forward(), byte.turnLeft().",
+				"A loop inside a loop: for row = 1, 3 do ... the whole row ... end."
+			],
+			"block_hints": [
+				"A row: \"repeat 5 times\" \"move forward\", \"place a block below\". Then \"repeat 5 times\" \"move back\", and \"turn right\", \"move forward\", \"turn left\" to the next row.",
+				"A \"repeat 3 times\" around all of it: a loop inside a loop. Don't forget \"move up\" at the start."
+			],
+			"give": {
+				"item": "minecraft:wheat_seeds",
+				"count": 64
+			},
+			"check": {
+				"type": "farm",
+				"width": 3,
+				"length": 5
+			}
+		},
+		{
+			"id": "harvest",
+			"goal": "Now the wheat has grown, but not all of it: some is ripe (golden), some still young (green), in new places every time. Harvest only the ripe wheat (byte.digDown()) and sow again where you harvested.",
+			"not_yet": "Not yet: harvest and sow again all the ripe wheat, and leave the young wheat where it is.",
+			"hints": [
+				"byte.ripeDown() is true when the wheat under Byte is ripe.",
+				"In the row: byte.forward(), then if byte.ripeDown() then byte.digDown() byte.placeDown() end."
+			],
+			"block_hints": [
+				"\"ripe crop below?\" is true when the wheat under Byte is ripe.",
+				"In the row: \"move forward\", then \"if\" \"ripe crop below?\": \"dig below\", \"place a block below\"."
+			],
+			"give": {
+				"item": "minecraft:wheat_seeds",
+				"count": 64
+			},
+			"check": {
+				"type": "farm",
+				"width": 3,
+				"length": 5,
+				"harvest": true
+			}
+		},
+		{
+			"id": "count",
+			"goal": "A new field to harvest: this time Byte also says how much ripe wheat it harvested. Count it with a variable: MINE counts it too.",
+			"not_yet": "Not yet: harvest the ripe wheat, sow again, and make Byte say how many it harvested.",
+			"hints": [
+				"Before the loops, local harvested = 0; inside the if, harvested = harvested + 1.",
+				"At the end, mine.say(\"I harvested \" .. harvested .. \" wheat\")."
+			],
+			"block_hints": [
+				"Make a variable \"harvested\": \"set harvested to 0\" at the start, \"change harvested by 1\" inside the \"if\".",
+				"At the end, \"say\" with \"create text with\": \"I harvested \", harvested, \" wheat\"."
+			],
+			"give": {
+				"item": "minecraft:wheat_seeds",
+				"count": 64
+			},
+			"check": {
+				"type": "farm",
+				"width": 3,
+				"length": 5,
+				"harvest": true,
+				"count": true
+			}
+		}
+	]
+}

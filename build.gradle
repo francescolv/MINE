@@ -1,0 +1,215 @@
+plugins {
+	id 'net.fabricmc.fabric-loom' version '1.18.2'
+	id 'maven-publish'
+}
+
+version = project.mod_version
+group = project.maven_group
+
+base {
+	archivesName = project.archives_base_name
+}
+
+repositories {
+	// Loom already adds the essential repositories for Minecraft and Yarn.
+	maven {
+		name = "SquidDev"
+		url = "https://maven.squiddev.cc"
+		content {
+			includeGroup("cc.tweaked")
+		}
+	}
+	maven {
+		name = "Nucleoid"
+		url = "https://maven.nucleoid.xyz"
+		content {
+			includeGroup("xyz.nucleoid")
+		}
+	}
+}
+
+// Automated in-game tests (Fabric GameTest): ./gradlew runGametest
+sourceSets {
+	gametest {
+		compileClasspath += sourceSets.main.compileClasspath + sourceSets.main.output
+		runtimeClasspath += sourceSets.main.runtimeClasspath + sourceSets.main.output
+	}
+}
+
+loom {
+	splitEnvironmentSourceSets()
+
+	mods {
+		"mine" {
+			sourceSet sourceSets.main
+			sourceSet sourceSets.client
+		}
+		"mine-gametest" {
+			sourceSet sourceSets.gametest
+		}
+	}
+
+	runs {
+		client {
+			// Fixed name: same UUID on every launch, so test Agents and worlds stay "yours"
+			programArgs "--username", "Student"
+		}
+		gametest {
+			server()
+			name "Game Test"
+			vmArg "-Dfabric-api.gametest"
+			if (project.hasProperty("gametestFilter")) vmArg "-Dfabric-api.gametest.filter=${project.gametestFilter}"
+			vmArg "-Dfabric-api.gametest.report-file=${project.layout.buildDirectory.get()}/gametest/junit.xml"
+			// Lesson solutions really run inside an Agent (LessonGameTest)
+			vmArg "-Dmine.lessons=${project.file('docs/lessons')}"
+			runDir "build/gametest"
+			source sourceSets.gametest
+		}
+	}
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+
+	// CC: Tweaked: compile against the API, load the full mod in runClient/runServer
+	compileOnly "cc.tweaked:cc-tweaked-${project.minecraft_version}-fabric-api:${project.cctweaked_version}"
+	runtimeOnly "cc.tweaked:cc-tweaked-${project.minecraft_version}-fabric:${project.cctweaked_version}"
+	// One internal class, to turn an Agent on (AgentManager.powerOn): there's no API for it.
+	compileOnly "cc.tweaked:cc-tweaked-${project.minecraft_version}-fabric:${project.cctweaked_version}"
+	// Fantasy: the class worlds, dimensions made while the server runs. Inside MINE's jar.
+	implementation "xyz.nucleoid:fantasy:${project.fantasy_version}"
+	include "xyz.nucleoid:fantasy:${project.fantasy_version}"
+	// jSerialComm: MINE reads the students' boards (micro:bit, Arduino) on the PC's serial port. Inside MINE's jar.
+	implementation "com.fazecast:jSerialComm:${project.jserialcomm_version}"
+	include "com.fazecast:jSerialComm:${project.jserialcomm_version}"
+	// Tests may use CC: Tweaked internals, the mod may not.
+	gametestCompileOnly "cc.tweaked:cc-tweaked-${project.minecraft_version}-fabric:${project.cctweaked_version}"
+}
+
+java {
+	sourceCompatibility = JavaVersion.VERSION_25
+	targetCompatibility = JavaVersion.VERSION_25
+	withSourcesJar()
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 25
+	it.options.compilerArgs += ["-Xmaxerrs", "2000"]
+}
+
+processResources {
+	inputs.property "version", project.version
+
+	filesMatching("fabric.mod.json") {
+		expand "version": project.version
+	}
+}
+
+jar {
+	from("LICENSE") {
+		rename { "${it}_${project.archives_base_name}" }
+	}
+}
+
+publishing {
+	publications {
+		create("mavenJava", MavenPublication) {
+			artifactId = project.archives_base_name
+			from components.java
+		}
+	}
+	repositories {
+		// Add your Maven repository here if and when you decide to publish artifacts
+	}
+}
+
+// The MINE modpack for schools: ./gradlew modpack → build/distributions/MINE-<version>.mrpack
+// One file that Prism Launcher and the Modrinth App install with Fabric, Fabric API, CC: Tweaked
+// and MINE. The mods are pinned in modpack/mods.json (downloaded by the launcher from Modrinth);
+// MINE itself travels inside the pack.
+def modpackIndex = tasks.register("modpackIndex") {
+	def modsFile = file("modpack/mods.json")
+	def output = layout.buildDirectory.file("modpack/modrinth.index.json")
+	inputs.file(modsFile)
+	inputs.property("version", project.version)
+	inputs.property("loader", project.loader_version)
+	inputs.property("minecraft", project.minecraft_version)
+	outputs.file(output)
+	doLast {
+		def mods = new groovy.json.JsonSlurper().parse(modsFile).mods
+		// The pack must hold the versions MINE is built and tested with.
+		def expected = ["fabric-api": project.fabric_version, "cc-tweaked": project.cctweaked_version]
+		expected.each { name, version ->
+			def mod = mods.find { it.name == name }
+			if (mod == null || mod.version != version) {
+				throw new GradleException("modpack/mods.json: $name should be $version (gradle.properties), found ${mod?.version}")
+			}
+		}
+		def index = [
+				formatVersion: 1,
+				game         : "minecraft",
+				versionId    : project.version,
+				name         : "MINE",
+				summary      : "MINE (Mine Is Not Education): Agent, lessons, NPCs and portfolio for school labs",
+				files        : mods.collect { mod ->
+					[path     : mod.path,
+					 hashes   : [sha1: mod.sha1, sha512: mod.sha512],
+					 env      : [client: "required", server: "required"],
+					 downloads: [mod.url],
+					 fileSize : mod.size]
+				},
+				dependencies : ["minecraft": project.minecraft_version, "fabric-loader": project.loader_version]
+		]
+		output.get().asFile.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(index))
+	}
+}
+
+tasks.register("modpack", Zip) {
+	group = "build"
+	description = "Builds the MINE modpack (.mrpack) for Prism Launcher and the Modrinth App."
+	archiveFileName = "MINE-${project.version}.mrpack"
+	destinationDirectory = layout.buildDirectory.dir("distributions")
+	from(modpackIndex)
+	from(tasks.named("jar")) {
+		into "overrides/mods"
+	}
+}
+
+// The MINE server package: ./gradlew serverPack → build/distributions/MINE-server-<version>.zip
+// Unzip it on the school server and run install.sh (see docs/guide/server.md).
+def serverModsList = tasks.register("serverModsList") {
+	def modsFile = file("modpack/mods.json")
+	def output = layout.buildDirectory.dir("serverpack")
+	inputs.file(modsFile)
+	inputs.property("loader", project.loader_version)
+	inputs.property("minecraft", project.minecraft_version)
+	outputs.dir(output)
+	doLast {
+		def mods = new groovy.json.JsonSlurper().parse(modsFile).mods
+		def dir = output.get().asFile
+		dir.mkdirs()
+		// One line per mod: path, size, sha512, url (read by install.sh).
+		new File(dir, "mods.list").text = mods.collect { "${it.path} ${it.size} ${it.sha512} ${it.url}" }.join("\n") + "\n"
+		new File(dir, "fabric-loader.version").text = project.loader_version + "\n"
+		new File(dir, "minecraft.version").text = project.minecraft_version + "\n"
+	}
+}
+
+tasks.register("serverPack", Zip) {
+	group = "build"
+	description = "Builds the MINE server package: installer, systemd service, backups."
+	dependsOn(modpackIndex)
+	archiveFileName = "MINE-server-${project.version}.zip"
+	destinationDirectory = layout.buildDirectory.dir("distributions")
+	into("MINE-server") {
+		from(serverModsList)
+		from(tasks.named("jar"))
+		from("server") {
+			filesMatching(["install.sh", "mine-cmd", "mine-backup"]) {
+				permissions { unix("rwxr-xr-x") }
+			}
+		}
+	}
+}

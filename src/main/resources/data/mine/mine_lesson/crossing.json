@@ -1,0 +1,47 @@
+{
+	"format": 1,
+	"order": 14,
+	"title": "Python: the level crossing (Arduino)",
+	"reflection": "Your crossing was always in one state, and events moved it from one to the other. Which machines around you work like this (a lift, a vending machine, a traffic light)? What are their states and their events?",
+	"steps": [
+		{
+			"id": "close",
+			"goal": "In Python. A level crossing: the door in front of Byte is the barrier (open while Byte sends it redstone), the lamp behind it the light. When the program starts the crossing is open and the light off; when the Arduino says a train is coming (treno:1), it closes and the light goes on. MINE plays the Arduino to test it.",
+			"not_yet": "Not yet: open with the light off when the program starts; closed with the light on when treno:1 arrives.",
+			"hints": [
+				"A function crossing(closed) does both: redstone.setOutput(\"front\", not closed) and redstone.setOutput(\"back\", closed).",
+				"crossing(False) at the start; then while True: mine.device.wait(\"treno\") and crossing(True)."
+			],
+			"check": {
+				"type": "crossing"
+			}
+		},
+		{
+			"id": "reopen",
+			"goal": "When the train has passed, a sensor on the track (the lever on Byte's left) opens the crossing again. Now there are two kinds of events: a train from the Arduino, a redstone change. Wait for whichever comes first.",
+			"not_yet": "Not yet: a train closes the crossing (light on), the lever on Byte's left opens it again (light off).",
+			"hints": [
+				"event = os.pullEvent() waits for anything: event[0] is \"mine_device\" for the board (then event[1] is the key) or \"redstone\".",
+				"if event[0] == \"mine_device\" and event[1] == \"treno\": close it. elif event[0] == \"redstone\" and redstone.getInput(\"left\"): open it."
+			],
+			"check": {
+				"type": "crossing",
+				"reopen": true
+			}
+		},
+		{
+			"id": "trains",
+			"goal": "Two tracks: a second train can come before the first has passed. Count the trains between the barriers: the crossing opens only when they have all passed. And the Arduino's LED is on (led:1) while the crossing is closed, off (led:0) when it's open.",
+			"not_yet": "Not yet: count the trains and open only when they have all passed; led:1 to the Arduino while closed, led:0 when open.",
+			"hints": [
+				"A variable trains counts them: +1 for each treno, -1 each time the lever goes on (if trains > 0). Closed means trains > 0.",
+				"A function show() sets the barrier, the light and mine.device.send(\"led\", 1 if closed else 0): call it after every change."
+			],
+			"check": {
+				"type": "crossing",
+				"reopen": true,
+				"count": true
+			}
+		}
+	]
+}

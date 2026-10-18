@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "powered=false": {
+      "model": "mine:block/board_sender"
+    },
+    "powered=true": {
+      "model": "mine:block/board_sender_on"
+    }
+  }
+}

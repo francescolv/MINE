@@ -1,0 +1,37 @@
+{
+	"blocks": {
+		"languageVersion": 0,
+		"blocks": [
+			{
+				"type": "mine_say",
+				"inputs": {
+					"TEXT": {
+						"block": {
+							"type": "text",
+							"fields": {
+								"TEXT": "Hi! I'm your Byte."
+							}
+						}
+					}
+				},
+				"next": {
+					"block": {
+						"type": "mine_say",
+						"inputs": {
+							"TEXT": {
+								"block": {
+									"type": "text",
+									"fields": {
+										"TEXT": "I'm ready for instructions."
+									}
+								}
+							}
+						}
+					}
+				},
+				"x": 20,
+				"y": 20
+			}
+		]
+	}
+}

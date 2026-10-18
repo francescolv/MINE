@@ -1,0 +1,534 @@
+{
+	"blocks": {
+		"languageVersion": 0,
+		"blocks": [
+			{
+				"type": "variables_set",
+				"fields": {
+					"VAR": {
+						"id": "var_a"
+					}
+				},
+				"inputs": {
+					"VALUE": {
+						"block": {
+							"type": "math_number",
+							"fields": {
+								"NUM": 0
+							}
+						}
+					}
+				},
+				"next": {
+					"block": {
+						"type": "variables_set",
+						"fields": {
+							"VAR": {
+								"id": "var_d"
+							}
+						},
+						"inputs": {
+							"VALUE": {
+								"block": {
+									"type": "math_number",
+									"fields": {
+										"NUM": 0
+									}
+								}
+							}
+						},
+						"next": {
+							"block": {
+								"type": "procedures_callnoreturn",
+								"extraState": {
+									"name": "vaiA",
+									"params": [
+										"versoA",
+										"versoD"
+									]
+								},
+								"inputs": {
+									"ARG0": {
+										"block": {
+											"type": "mine_challenge_at",
+											"fields": {
+												"N": 1
+											}
+										}
+									},
+									"ARG1": {
+										"block": {
+											"type": "mine_challenge_at",
+											"fields": {
+												"N": 2
+											}
+										}
+									}
+								},
+								"next": {
+									"block": {
+										"type": "mine_dig",
+										"fields": {
+											"WHERE": "Down"
+										},
+										"next": {
+											"block": {
+												"type": "procedures_callnoreturn",
+												"extraState": {
+													"name": "vaiA",
+													"params": [
+														"versoA",
+														"versoD"
+													]
+												},
+												"inputs": {
+													"ARG0": {
+														"block": {
+															"type": "mine_challenge_at",
+															"fields": {
+																"N": 3
+															}
+														}
+													},
+													"ARG1": {
+														"block": {
+															"type": "mine_challenge_at",
+															"fields": {
+																"N": 4
+															}
+														}
+													}
+												},
+												"next": {
+													"block": {
+														"type": "mine_dig",
+														"fields": {
+															"WHERE": "Down"
+														},
+														"next": {
+															"block": {
+																"type": "procedures_callnoreturn",
+																"extraState": {
+																	"name": "vaiA",
+																	"params": [
+																		"versoA",
+																		"versoD"
+																	]
+																},
+																"inputs": {
+																	"ARG0": {
+																		"block": {
+																			"type": "mine_challenge_at",
+																			"fields": {
+																				"N": 5
+																			}
+																		}
+																	},
+																	"ARG1": {
+																		"block": {
+																			"type": "mine_challenge_at",
+																			"fields": {
+																				"N": 6
+																			}
+																		}
+																	}
+																},
+																"next": {
+																	"block": {
+																		"type": "mine_dig",
+																		"fields": {
+																			"WHERE": "Down"
+																		},
+																		"next": {
+																			"block": {
+																				"type": "procedures_callnoreturn",
+																				"extraState": {
+																					"name": "vaiA",
+																					"params": [
+																						"versoA",
+																						"versoD"
+																					]
+																				},
+																				"inputs": {
+																					"ARG0": {
+																						"block": {
+																							"type": "math_number",
+																							"fields": {
+																								"NUM": 0
+																							}
+																						}
+																					},
+																					"ARG1": {
+																						"block": {
+																							"type": "math_number",
+																							"fields": {
+																								"NUM": 0
+																							}
+																						}
+																					}
+																				},
+																				"next": {
+																					"block": {
+																						"type": "mine_say",
+																						"inputs": {
+																							"TEXT": {
+																								"block": {
+																									"type": "text",
+																									"fields": {
+																										"TEXT": "Tre tesori, e sono a casa!"
+																									}
+																								}
+																							}
+																						}
+																					}
+																				}
+																			}
+																		}
+																	}
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"x": 20,
+				"y": 20
+			},
+			{
+				"type": "procedures_defnoreturn",
+				"fields": {
+					"NAME": "vaiA"
+				},
+				"inputs": {
+					"STACK": {
+						"block": {
+							"type": "controls_whileUntil",
+							"fields": {
+								"MODE": "WHILE"
+							},
+							"inputs": {
+								"BOOL": {
+									"block": {
+										"type": "logic_compare",
+										"fields": {
+											"OP": "LT"
+										},
+										"inputs": {
+											"A": {
+												"block": {
+													"type": "variables_get",
+													"fields": {
+														"VAR": {
+															"id": "var_a"
+														}
+													}
+												}
+											},
+											"B": {
+												"block": {
+													"type": "variables_get",
+													"fields": {
+														"VAR": {
+															"id": "var_versoA"
+														}
+													}
+												}
+											}
+										}
+									}
+								},
+								"DO": {
+									"block": {
+										"type": "mine_move",
+										"fields": {
+											"WAY": "forward"
+										},
+										"next": {
+											"block": {
+												"type": "math_change",
+												"fields": {
+													"VAR": {
+														"id": "var_a"
+													}
+												},
+												"inputs": {
+													"DELTA": {
+														"block": {
+															"type": "math_number",
+															"fields": {
+																"NUM": 1
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							},
+							"next": {
+								"block": {
+									"type": "controls_whileUntil",
+									"fields": {
+										"MODE": "WHILE"
+									},
+									"inputs": {
+										"BOOL": {
+											"block": {
+												"type": "logic_compare",
+												"fields": {
+													"OP": "GT"
+												},
+												"inputs": {
+													"A": {
+														"block": {
+															"type": "variables_get",
+															"fields": {
+																"VAR": {
+																	"id": "var_a"
+																}
+															}
+														}
+													},
+													"B": {
+														"block": {
+															"type": "variables_get",
+															"fields": {
+																"VAR": {
+																	"id": "var_versoA"
+																}
+															}
+														}
+													}
+												}
+											}
+										},
+										"DO": {
+											"block": {
+												"type": "mine_move",
+												"fields": {
+													"WAY": "back"
+												},
+												"next": {
+													"block": {
+														"type": "math_change",
+														"fields": {
+															"VAR": {
+																"id": "var_a"
+															}
+														},
+														"inputs": {
+															"DELTA": {
+																"block": {
+																	"type": "math_number",
+																	"fields": {
+																		"NUM": -1
+																	}
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									},
+									"next": {
+										"block": {
+											"type": "mine_turn",
+											"fields": {
+												"WAY": "Right"
+											},
+											"next": {
+												"block": {
+													"type": "controls_whileUntil",
+													"fields": {
+														"MODE": "WHILE"
+													},
+													"inputs": {
+														"BOOL": {
+															"block": {
+																"type": "logic_compare",
+																"fields": {
+																	"OP": "LT"
+																},
+																"inputs": {
+																	"A": {
+																		"block": {
+																			"type": "variables_get",
+																			"fields": {
+																				"VAR": {
+																					"id": "var_d"
+																				}
+																			}
+																		}
+																	},
+																	"B": {
+																		"block": {
+																			"type": "variables_get",
+																			"fields": {
+																				"VAR": {
+																					"id": "var_versoD"
+																				}
+																			}
+																		}
+																	}
+																}
+															}
+														},
+														"DO": {
+															"block": {
+																"type": "mine_move",
+																"fields": {
+																	"WAY": "forward"
+																},
+																"next": {
+																	"block": {
+																		"type": "math_change",
+																		"fields": {
+																			"VAR": {
+																				"id": "var_d"
+																			}
+																		},
+																		"inputs": {
+																			"DELTA": {
+																				"block": {
+																					"type": "math_number",
+																					"fields": {
+																						"NUM": 1
+																					}
+																				}
+																			}
+																		}
+																	}
+																}
+															}
+														}
+													},
+													"next": {
+														"block": {
+															"type": "controls_whileUntil",
+															"fields": {
+																"MODE": "WHILE"
+															},
+															"inputs": {
+																"BOOL": {
+																	"block": {
+																		"type": "logic_compare",
+																		"fields": {
+																			"OP": "GT"
+																		},
+																		"inputs": {
+																			"A": {
+																				"block": {
+																					"type": "variables_get",
+																					"fields": {
+																						"VAR": {
+																							"id": "var_d"
+																						}
+																					}
+																				}
+																			},
+																			"B": {
+																				"block": {
+																					"type": "variables_get",
+																					"fields": {
+																						"VAR": {
+																							"id": "var_versoD"
+																						}
+																					}
+																				}
+																			}
+																		}
+																	}
+																},
+																"DO": {
+																	"block": {
+																		"type": "mine_move",
+																		"fields": {
+																			"WAY": "back"
+																		},
+																		"next": {
+																			"block": {
+																				"type": "math_change",
+																				"fields": {
+																					"VAR": {
+																						"id": "var_d"
+																					}
+																				},
+																				"inputs": {
+																					"DELTA": {
+																						"block": {
+																							"type": "math_number",
+																							"fields": {
+																								"NUM": -1
+																							}
+																						}
+																					}
+																				}
+																			}
+																		}
+																	}
+																}
+															},
+															"next": {
+																"block": {
+																	"type": "mine_turn",
+																	"fields": {
+																		"WAY": "Left"
+																	}
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"extraState": {
+					"params": [
+						{
+							"name": "versoA",
+							"id": "var_versoA"
+						},
+						{
+							"name": "versoD",
+							"id": "var_versoD"
+						}
+					]
+				},
+				"x": 20,
+				"y": 420
+			}
+		]
+	},
+	"variables": [
+		{
+			"name": "a",
+			"id": "var_a"
+		},
+		{
+			"name": "versoA",
+			"id": "var_versoA"
+		},
+		{
+			"name": "d",
+			"id": "var_d"
+		},
+		{
+			"name": "versoD",
+			"id": "var_versoD"
+		}
+	]
+}

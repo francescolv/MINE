@@ -1,0 +1,9 @@
+[Unit]
+Description=Nightly backup of the MINE world
+
+[Timer]
+OnCalendar=*-*-* 02:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

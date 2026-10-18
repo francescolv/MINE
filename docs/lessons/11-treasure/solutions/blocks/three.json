@@ -1,0 +1,534 @@
+{
+	"blocks": {
+		"languageVersion": 0,
+		"blocks": [
+			{
+				"type": "variables_set",
+				"fields": {
+					"VAR": {
+						"id": "var_f"
+					}
+				},
+				"inputs": {
+					"VALUE": {
+						"block": {
+							"type": "math_number",
+							"fields": {
+								"NUM": 0
+							}
+						}
+					}
+				},
+				"next": {
+					"block": {
+						"type": "variables_set",
+						"fields": {
+							"VAR": {
+								"id": "var_r"
+							}
+						},
+						"inputs": {
+							"VALUE": {
+								"block": {
+									"type": "math_number",
+									"fields": {
+										"NUM": 0
+									}
+								}
+							}
+						},
+						"next": {
+							"block": {
+								"type": "procedures_callnoreturn",
+								"extraState": {
+									"name": "goTo",
+									"params": [
+										"toF",
+										"toR"
+									]
+								},
+								"inputs": {
+									"ARG0": {
+										"block": {
+											"type": "mine_challenge_at",
+											"fields": {
+												"N": 1
+											}
+										}
+									},
+									"ARG1": {
+										"block": {
+											"type": "mine_challenge_at",
+											"fields": {
+												"N": 2
+											}
+										}
+									}
+								},
+								"next": {
+									"block": {
+										"type": "mine_dig",
+										"fields": {
+											"WHERE": "Down"
+										},
+										"next": {
+											"block": {
+												"type": "procedures_callnoreturn",
+												"extraState": {
+													"name": "goTo",
+													"params": [
+														"toF",
+														"toR"
+													]
+												},
+												"inputs": {
+													"ARG0": {
+														"block": {
+															"type": "mine_challenge_at",
+															"fields": {
+																"N": 3
+															}
+														}
+													},
+													"ARG1": {
+														"block": {
+															"type": "mine_challenge_at",
+															"fields": {
+																"N": 4
+															}
+														}
+													}
+												},
+												"next": {
+													"block": {
+														"type": "mine_dig",
+														"fields": {
+															"WHERE": "Down"
+														},
+														"next": {
+															"block": {
+																"type": "procedures_callnoreturn",
+																"extraState": {
+																	"name": "goTo",
+																	"params": [
+																		"toF",
+																		"toR"
+																	]
+																},
+																"inputs": {
+																	"ARG0": {
+																		"block": {
+																			"type": "mine_challenge_at",
+																			"fields": {
+																				"N": 5
+																			}
+																		}
+																	},
+																	"ARG1": {
+																		"block": {
+																			"type": "mine_challenge_at",
+																			"fields": {
+																				"N": 6
+																			}
+																		}
+																	}
+																},
+																"next": {
+																	"block": {
+																		"type": "mine_dig",
+																		"fields": {
+																			"WHERE": "Down"
+																		},
+																		"next": {
+																			"block": {
+																				"type": "procedures_callnoreturn",
+																				"extraState": {
+																					"name": "goTo",
+																					"params": [
+																						"toF",
+																						"toR"
+																					]
+																				},
+																				"inputs": {
+																					"ARG0": {
+																						"block": {
+																							"type": "math_number",
+																							"fields": {
+																								"NUM": 0
+																							}
+																						}
+																					},
+																					"ARG1": {
+																						"block": {
+																							"type": "math_number",
+																							"fields": {
+																								"NUM": 0
+																							}
+																						}
+																					}
+																				},
+																				"next": {
+																					"block": {
+																						"type": "mine_say",
+																						"inputs": {
+																							"TEXT": {
+																								"block": {
+																									"type": "text",
+																									"fields": {
+																										"TEXT": "Three treasures, and back home!"
+																									}
+																								}
+																							}
+																						}
+																					}
+																				}
+																			}
+																		}
+																	}
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"x": 20,
+				"y": 20
+			},
+			{
+				"type": "procedures_defnoreturn",
+				"fields": {
+					"NAME": "goTo"
+				},
+				"inputs": {
+					"STACK": {
+						"block": {
+							"type": "controls_whileUntil",
+							"fields": {
+								"MODE": "WHILE"
+							},
+							"inputs": {
+								"BOOL": {
+									"block": {
+										"type": "logic_compare",
+										"fields": {
+											"OP": "LT"
+										},
+										"inputs": {
+											"A": {
+												"block": {
+													"type": "variables_get",
+													"fields": {
+														"VAR": {
+															"id": "var_f"
+														}
+													}
+												}
+											},
+											"B": {
+												"block": {
+													"type": "variables_get",
+													"fields": {
+														"VAR": {
+															"id": "var_toF"
+														}
+													}
+												}
+											}
+										}
+									}
+								},
+								"DO": {
+									"block": {
+										"type": "mine_move",
+										"fields": {
+											"WAY": "forward"
+										},
+										"next": {
+											"block": {
+												"type": "math_change",
+												"fields": {
+													"VAR": {
+														"id": "var_f"
+													}
+												},
+												"inputs": {
+													"DELTA": {
+														"block": {
+															"type": "math_number",
+															"fields": {
+																"NUM": 1
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							},
+							"next": {
+								"block": {
+									"type": "controls_whileUntil",
+									"fields": {
+										"MODE": "WHILE"
+									},
+									"inputs": {
+										"BOOL": {
+											"block": {
+												"type": "logic_compare",
+												"fields": {
+													"OP": "GT"
+												},
+												"inputs": {
+													"A": {
+														"block": {
+															"type": "variables_get",
+															"fields": {
+																"VAR": {
+																	"id": "var_f"
+																}
+															}
+														}
+													},
+													"B": {
+														"block": {
+															"type": "variables_get",
+															"fields": {
+																"VAR": {
+																	"id": "var_toF"
+																}
+															}
+														}
+													}
+												}
+											}
+										},
+										"DO": {
+											"block": {
+												"type": "mine_move",
+												"fields": {
+													"WAY": "back"
+												},
+												"next": {
+													"block": {
+														"type": "math_change",
+														"fields": {
+															"VAR": {
+																"id": "var_f"
+															}
+														},
+														"inputs": {
+															"DELTA": {
+																"block": {
+																	"type": "math_number",
+																	"fields": {
+																		"NUM": -1
+																	}
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									},
+									"next": {
+										"block": {
+											"type": "mine_turn",
+											"fields": {
+												"WAY": "Right"
+											},
+											"next": {
+												"block": {
+													"type": "controls_whileUntil",
+													"fields": {
+														"MODE": "WHILE"
+													},
+													"inputs": {
+														"BOOL": {
+															"block": {
+																"type": "logic_compare",
+																"fields": {
+																	"OP": "LT"
+																},
+																"inputs": {
+																	"A": {
+																		"block": {
+																			"type": "variables_get",
+																			"fields": {
+																				"VAR": {
+																					"id": "var_r"
+																				}
+																			}
+																		}
+																	},
+																	"B": {
+																		"block": {
+																			"type": "variables_get",
+																			"fields": {
+																				"VAR": {
+																					"id": "var_toR"
+																				}
+																			}
+																		}
+																	}
+																}
+															}
+														},
+														"DO": {
+															"block": {
+																"type": "mine_move",
+																"fields": {
+																	"WAY": "forward"
+																},
+																"next": {
+																	"block": {
+																		"type": "math_change",
+																		"fields": {
+																			"VAR": {
+																				"id": "var_r"
+																			}
+																		},
+																		"inputs": {
+																			"DELTA": {
+																				"block": {
+																					"type": "math_number",
+																					"fields": {
+																						"NUM": 1
+																					}
+																				}
+																			}
+																		}
+																	}
+																}
+															}
+														}
+													},
+													"next": {
+														"block": {
+															"type": "controls_whileUntil",
+															"fields": {
+																"MODE": "WHILE"
+															},
+															"inputs": {
+																"BOOL": {
+																	"block": {
+																		"type": "logic_compare",
+																		"fields": {
+																			"OP": "GT"
+																		},
+																		"inputs": {
+																			"A": {
+																				"block": {
+																					"type": "variables_get",
+																					"fields": {
+																						"VAR": {
+																							"id": "var_r"
+																						}
+																					}
+																				}
+																			},
+																			"B": {
+																				"block": {
+																					"type": "variables_get",
+																					"fields": {
+																						"VAR": {
+																							"id": "var_toR"
+																						}
+																					}
+																				}
+																			}
+																		}
+																	}
+																},
+																"DO": {
+																	"block": {
+																		"type": "mine_move",
+																		"fields": {
+																			"WAY": "back"
+																		},
+																		"next": {
+																			"block": {
+																				"type": "math_change",
+																				"fields": {
+																					"VAR": {
+																						"id": "var_r"
+																					}
+																				},
+																				"inputs": {
+																					"DELTA": {
+																						"block": {
+																							"type": "math_number",
+																							"fields": {
+																								"NUM": -1
+																							}
+																						}
+																					}
+																				}
+																			}
+																		}
+																	}
+																}
+															},
+															"next": {
+																"block": {
+																	"type": "mine_turn",
+																	"fields": {
+																		"WAY": "Left"
+																	}
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"extraState": {
+					"params": [
+						{
+							"name": "toF",
+							"id": "var_toF"
+						},
+						{
+							"name": "toR",
+							"id": "var_toR"
+						}
+					]
+				},
+				"x": 20,
+				"y": 420
+			}
+		]
+	},
+	"variables": [
+		{
+			"name": "f",
+			"id": "var_f"
+		},
+		{
+			"name": "toF",
+			"id": "var_toF"
+		},
+		{
+			"name": "r",
+			"id": "var_r"
+		},
+		{
+			"name": "toR",
+			"id": "var_toR"
+		}
+	]
+}

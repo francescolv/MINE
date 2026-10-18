@@ -1,0 +1,44 @@
+name: release
+
+# A tag like v0.1.0 publishes a GitHub Release with the two files schools need.
+# Their names don't carry the version, so the guide's links always give the latest:
+#   https://github.com/francescolv/MINE/releases/latest/download/MINE.mrpack
+#   https://github.com/francescolv/MINE/releases/latest/download/MINE-server.zip
+on:
+  push:
+    tags: [ 'v*' ]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup JDK 25
+        uses: actions/setup-java@v6
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+
+      - name: Check the tag matches mod_version
+        run: |
+          version="$(sed -n 's/^mod_version=//p' gradle.properties)"
+          [ "$GITHUB_REF_NAME" = "v$version" ] || { echo "Tag $GITHUB_REF_NAME, but gradle.properties says $version"; exit 1; }
+
+      - name: Build and test
+        run: |
+          chmod +x gradlew
+          ./gradlew build modpack serverPack runGametest
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          mkdir release
+          cp "build/distributions/MINE-$version.mrpack" release/MINE.mrpack
+          cp "build/distributions/MINE-server-$version.zip" release/MINE-server.zip
+          gh release create "$GITHUB_REF_NAME" release/* --title "MINE $version" --generate-notes

@@ -1,0 +1,19 @@
+name: ✨ Feature proposal
+description: An idea for the mod
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What classroom problem does it solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+  - type: dropdown
+    id: module
+    attributes:
+      label: Module
+      options: [Code Builder / Agent, Class worlds, Portfolio / Camera, Teaching NPCs, Other]

@@ -1,0 +1,65 @@
+{
+	"format": 1,
+	"order": 9,
+	"title": "Python: data from the board, as charts",
+	"reflection": "Your program turned numbers into a chart you can walk around. Where have you seen charts made from measurements (weather, sport, a science experiment)? What did they help people see?",
+	"steps": [
+		{
+			"id": "bar_chart",
+			"goal": "In Python. Your board sends 5 numbers from 1 to 6 with the key dato (MINE plays the board to test it). Byte keeps them in a list, then builds a bar chart: one column per number, as tall as the number, the first right in front of Byte and each next one a block further to its right. Then Byte goes back where it started.",
+			"not_yet": "Not yet: one column per number, as tall as the number, the first in front of Byte and the others one by one to its right; then Byte back where it started.",
+			"hints": [
+				"key, value = mine.device.wait(\"dato\") waits for the next number. In a for loop of 5, add each value to a list: numbers.append(value).",
+				"For each number n in the list: n times byte.place() and byte.up(), then n times byte.down(); then byte.turnRight(), byte.forward(), byte.turnLeft() to move to the next column. At the end: byte.turnLeft(), 5 times byte.forward(), byte.turnRight()."
+			],
+			"give": {
+				"item": "minecraft:oak_planks",
+				"count": 64
+			},
+			"check": {
+				"type": "chart",
+				"key": "dato",
+				"count": 5,
+				"min": 1,
+				"max": 6
+			}
+		},
+		{
+			"id": "largest",
+			"goal": "Now no building: Byte says (mine.say) the largest of the 5 numbers and its position in the list, counting from 1: for example \"the largest is 6, number 3\".",
+			"not_yet": "Not yet: Byte must say the largest number and its position, counting from 1.",
+			"hints": [
+				"max(numbers) is the largest number of a list; numbers.index(x) is where x is, counting from 0.",
+				"top = max(numbers), then mine.say(\"the largest is \" + str(top) + \", number \" + str(numbers.index(top) + 1))."
+			],
+			"check": {
+				"type": "chart_max",
+				"key": "dato",
+				"count": 5,
+				"min": 1,
+				"max": 9
+			}
+		},
+		{
+			"id": "light_chart",
+			"goal": "Last one: 5 readings of light, the key luce, from 0 to 255. Columns that tall wouldn't fit: scale them to 8 at most, as tall as luce * 8 // 255 (// divides and drops the decimals). Byte goes back where it started, as in the first step.",
+			"not_yet": "Not yet: each column must be as tall as luce * 8 // 255.",
+			"hints": [
+				"The same chart as in the first step, with the key luce, and the height of each column computed: h = value * 8 // 255.",
+				"A function makes it tidy: def column(h): with the loops that build one column of height h. Then for value in numbers: column(value * 8 // 255) and the move to the right."
+			],
+			"give": {
+				"item": "minecraft:oak_planks",
+				"count": 64
+			},
+			"check": {
+				"type": "chart",
+				"key": "luce",
+				"count": 5,
+				"min": 0,
+				"max": 255,
+				"height": 8
+			}
+		}
+	]
+}

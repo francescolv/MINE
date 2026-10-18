@@ -1,0 +1,71 @@
+{
+	"format": 1,
+	"order": 4,
+	"title": "Conditions: Byte decides",
+	"reflection": "MINE changed the challenge every time, but your programs still worked. How did Byte know what to do?",
+	"steps": [
+		{
+			"id": "wall",
+			"goal": "Every time your program starts, MINE builds a wall in front of Byte, at a different distance. Write a program that climbs over the wall and lands right behind it.",
+			"not_yet": "Not yet: Byte has to land right behind the wall, back on the ground, without breaking it.",
+			"hints": [
+				"byte.detect() is true when there is a block in front of Byte. while not byte.detect() do ... end repeats until Byte touches the wall.",
+				"When the loop ends, Byte is touching the wall: go up, forward twice, then down."
+			],
+			"block_hints": [
+				"The \"block in front?\" block is true when there is a block in front of Byte. Put \"not block in front?\" in \"repeat while\": it repeats until Byte touches the wall.",
+				"When the loop ends, Byte is touching the wall: \"move up\", \"move forward\" twice, then \"move down\"."
+			],
+			"check": {
+				"type": "over_the_wall",
+				"min_distance": 2,
+				"max_distance": 6
+			}
+		},
+		{
+			"id": "gold",
+			"goal": "Now MINE lays a row of 8 blocks in front of Byte: stone, with some gold in different places every time. Dig up only the gold, and leave the stone.",
+			"not_yet": "Not yet: dig up all the gold in the row, and none of the stone.",
+			"hints": [
+				"MINE has put a gold block in the highlighted slot: byte.compareDown() is true when the block below is the same as that one.",
+				"Go up one block, then 8 times: move forward, and if byte.compareDown() then dig with byte.digDown()."
+			],
+			"block_hints": [
+				"MINE has put a gold block in the highlighted slot: \"block below same as the slot's?\" is true when the block below is gold too.",
+				"\"move up\", then \"repeat 8 times\": \"move forward\", and an \"if\" with \"block below same as the slot's?\" that does \"dig below\"."
+			],
+			"give": {
+				"item": "minecraft:gold_block",
+				"count": 1
+			},
+			"check": {
+				"type": "gold_row",
+				"length": 8,
+				"min_gold": 2,
+				"max_gold": 5
+			}
+		},
+		{
+			"id": "tower",
+			"goal": "MINE has put some blocks in the highlighted slot. How many? It doesn't matter! Build a tower in front of Byte with all of them, then bring Byte back to the ground.",
+			"not_yet": "Not yet: the tower must use all the blocks in the highlighted slot, and Byte must come back to the ground.",
+			"hints": [
+				"byte.place() is false when it can't place a block, for example when the slot is empty. while byte.place() do byte.up() end builds until the blocks run out.",
+				"byte.down() is false when Byte touches the ground. while byte.down() do end brings it all the way down."
+			],
+			"block_hints": [
+				"The \"blocks in the slot\" block says how many blocks are left. Use \"repeat while\" with \"blocks in the slot > 0\" (the compare block is in Logic): \"place a block in front\", \"move up\".",
+				"Then \"repeat until\" with \"block below?\": \"move down\". Byte stops when it touches the ground."
+			],
+			"give": {
+				"item": "minecraft:oak_planks",
+				"count": 3,
+				"max_count": 12
+			},
+			"check": {
+				"type": "tower_of_all",
+				"min_blocks": 3
+			}
+		}
+	]
+}

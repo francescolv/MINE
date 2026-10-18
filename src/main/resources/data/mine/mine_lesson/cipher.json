@@ -1,0 +1,48 @@
+{
+	"format": 1,
+	"order": 16,
+	"title": "Secret messages: Caesar's cipher",
+	"reflection": "Byte cracked a message without the key, trying them all. Why is Caesar's cipher not safe today? How do the messages on your phone stay secret?",
+	"steps": [
+		{
+			"id": "caesar",
+			"goal": "Julius Caesar wrote secret messages moving each letter 3 places forward in the alphabet (A becomes D, Z goes round to C). mine.challenge() gives a new secret message every time: decode it and make Byte say it.",
+			"not_yet": "Not yet: Byte has to say the decoded message.",
+			"hints": [
+				"Look at one letter at a time: for i = 1, #secret do local c = secret:sub(i, i) ... end. Spaces stay spaces.",
+				"string.byte(c) is the letter's number (A is 65). (n - 65 - 3) % 26 + 65 moves it back 3 places, round the alphabet; string.char turns it into a letter again."
+			],
+			"check": {
+				"type": "cipher",
+				"shift": 3
+			}
+		},
+		{
+			"id": "key",
+			"goal": "Now the key changes every time: mine.challenge() gives the secret message and the key (how many places each letter was moved). Decode it and make Byte say it.",
+			"not_yet": "Not yet: Byte has to say the message, decoded with the key MINE gave.",
+			"hints": [
+				"local secret, key = mine.challenge() gives both.",
+				"Make the decoding a function, decode(text, key): with the key instead of 3, it works for every key."
+			],
+			"check": {
+				"type": "cipher",
+				"shift": 0,
+				"tell_key": true
+			}
+		},
+		{
+			"id": "crack",
+			"goal": "An intercepted message, and no key! You only know it contains the word BYTE. Try all the keys, from 1 to 25, and make Byte say the message with the right one.",
+			"not_yet": "Not yet: Byte has to find the key and say the decoded message.",
+			"hints": [
+				"for key = 1, 25 do ... end tries them all: decode the message with each one.",
+				"plain:find(\"BYTE\") is true when the decoded message contains BYTE: then say it, and break stops the loop."
+			],
+			"check": {
+				"type": "cipher",
+				"shift": 0
+			}
+		}
+	]
+}

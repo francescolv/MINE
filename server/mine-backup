@@ -1,0 +1,24 @@
+#!/bin/sh
+# Backs up the MINE world (with the portfolios' photos) while the server runs.
+# Every night via mine-backup.timer; by hand: sudo mine-backup
+set -eu
+DIR=@DIR@
+LEVEL="$(sed -n 's/^level-name=//p' "$DIR/server.properties")"
+BACKUPS="$DIR/backups"
+KEEP_DAYS=14
+mkdir -p "$BACKUPS"
+running=no
+if [ -p /run/mine-server/console ] && systemctl is-active --quiet mine-server; then
+	running=yes
+	# Stop writing the world while it is copied, after saving everything.
+	printf 'save-off\nsave-all flush\n' > /run/mine-server/console
+	sleep 15
+fi
+file="$BACKUPS/${LEVEL:-world}-$(date +%Y-%m-%d_%H%M).tar.gz"
+status=0
+tar -czf "$file" -C "$DIR" "${LEVEL:-world}" || status=$?
+# Always back to saving, also if the copy failed.
+[ "$running" = yes ] && printf 'save-on\n' > /run/mine-server/console
+[ "$status" -eq 0 ] || { echo "Backup FAILED: $file" >&2; rm -f "$file"; exit "$status"; }
+find "$BACKUPS" -name '*.tar.gz' -mtime +"$KEEP_DAYS" -delete
+echo "Backup: $file ($(du -h "$file" | cut -f1))"

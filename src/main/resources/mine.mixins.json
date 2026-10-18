@@ -1,0 +1,15 @@
+{
+	"required": true,
+	"package": "io.github.francescolv.mine.mixin",
+	"compatibilityLevel": "JAVA_25",
+	"mixins": [
+		"FireBlockMixin",
+		"PlayerManagerMixin",
+		"ServerConfigurationNetworkHandlerAccessor",
+		"ServerExplosionMixin",
+		"ServerPlayerGameModeMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

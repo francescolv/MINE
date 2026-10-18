@@ -1,0 +1,130 @@
+{
+	"blocks": {
+		"languageVersion": 0,
+		"blocks": [
+			{
+				"type": "variables_set",
+				"fields": {
+					"VAR": {
+						"id": "var_avanti"
+					}
+				},
+				"inputs": {
+					"VALUE": {
+						"block": {
+							"type": "mine_challenge_at",
+							"fields": {
+								"N": 1
+							}
+						}
+					}
+				},
+				"next": {
+					"block": {
+						"type": "variables_set",
+						"fields": {
+							"VAR": {
+								"id": "var_destra"
+							}
+						},
+						"inputs": {
+							"VALUE": {
+								"block": {
+									"type": "mine_challenge_at",
+									"fields": {
+										"N": 2
+									}
+								}
+							}
+						},
+						"next": {
+							"block": {
+								"type": "controls_repeat_ext",
+								"inputs": {
+									"TIMES": {
+										"block": {
+											"type": "variables_get",
+											"fields": {
+												"VAR": {
+													"id": "var_avanti"
+												}
+											}
+										}
+									},
+									"DO": {
+										"block": {
+											"type": "mine_move",
+											"fields": {
+												"WAY": "forward"
+											}
+										}
+									}
+								},
+								"next": {
+									"block": {
+										"type": "mine_turn",
+										"fields": {
+											"WAY": "Right"
+										},
+										"next": {
+											"block": {
+												"type": "controls_repeat_ext",
+												"inputs": {
+													"TIMES": {
+														"block": {
+															"type": "variables_get",
+															"fields": {
+																"VAR": {
+																	"id": "var_destra"
+																}
+															}
+														}
+													},
+													"DO": {
+														"block": {
+															"type": "mine_move",
+															"fields": {
+																"WAY": "forward"
+															}
+														}
+													}
+												},
+												"next": {
+													"block": {
+														"type": "mine_say",
+														"inputs": {
+															"TEXT": {
+																"block": {
+																	"type": "text",
+																	"fields": {
+																		"TEXT": "Qui c'è la X!"
+																	}
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"x": 20,
+				"y": 20
+			}
+		]
+	},
+	"variables": [
+		{
+			"name": "avanti",
+			"id": "var_avanti"
+		},
+		{
+			"name": "destra",
+			"id": "var_destra"
+		}
+	]
+}

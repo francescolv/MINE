@@ -1,0 +1,31 @@
+name: 🐛 Bug
+description: Something doesn't work
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happens
+      description: Describe the problem and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How to reproduce it
+      placeholder: "1. Start the server...\n2. Run /mine ...\n3. ..."
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      placeholder: "MINE 0.1.0, Minecraft 26.3, Fabric Loader 0.19.x, Linux distro"
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Log
+      description: Paste latest.log or the crash report (remove student names!).
+      render: text

@@ -1,0 +1,51 @@
+{
+	"format": 1,
+	"order": 1,
+	"title": "First steps with Byte",
+	"reflection": "Why is it useful to save instructions in a program instead of typing them one at a time?",
+	"steps": [
+		{
+			"id": "hello",
+			"goal": "In Byte's terminal, first type edit hello to start the program; in it, make your Byte say something in chat with mine.say, then save and run it.",
+			"block_goal": "Make your Byte say something in chat with the \"say\" block, then run the program.",
+			"not_yet": "Not yet: your program has to make Byte speak with mine.say.",
+			"hints": [
+				"Check that the terminal's line starts with > and not with lua> (type exit() to leave lua), then type edit hello.",
+				"In the editor write mine.say(\"Hi!\"). Press Ctrl, pick Save with the arrows and press Enter; then Ctrl again, Exit, Enter. In the terminal type hello and press Enter."
+			],
+			"block_hints": [
+				"In Byte group, drag the \"say\" block into the white area and write something in it.",
+				"Press Run ▶ and go back to Minecraft: after 3, 2, 1 your Byte speaks in the chat."
+			],
+			"check": { "type": "said" }
+		},
+		{
+			"id": "roundtrip",
+			"goal": "Write a new program (edit roundtrip) that takes Byte 3 blocks forward and back to where it started, facing the same way.",
+			"not_yet": "Not yet: Byte has to go at least 3 blocks away and come back to where it started, facing the same way.",
+			"hints": [
+				"Plan it on paper first: how many steps forward? How many turns to face back?",
+				"To turn around, turn twice: byte.turnLeft() two times. At the end, turn twice again."
+			],
+			"block_hints": [
+				"Plan it on paper first: how many steps forward? How many turns to face back?",
+				"To turn around, use \"turn left\" twice. At the end, turn twice again."
+			],
+			"check": { "type": "roundtrip", "distance": 3 }
+		},
+		{
+			"id": "tower",
+			"goal": "Write a new program (edit tower) that builds a tower 3 blocks tall in front of Byte, then brings Byte back down.",
+			"not_yet": "Not yet: build a tower 3 blocks tall right in front of where Byte started, and bring Byte back down.",
+			"hints": [
+				"Byte needs blocks: put at least 3 in the highlighted slot of its 4x4 inventory, all in that same slot.",
+				"Place a block, go up, place a block... then come back down."
+			],
+			"block_hints": [
+				"Byte needs blocks: put at least 3 in the highlighted slot of its 4x4 inventory, all in that same slot.",
+				"\"place a block in front\", \"move up\", \"place a block in front\"... then \"move down\" until Byte is back on the ground."
+			],
+			"check": { "type": "tower", "height": 3 }
+		}
+	]
+}

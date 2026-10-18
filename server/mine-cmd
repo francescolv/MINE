@@ -1,0 +1,23 @@
+#!/bin/sh
+# Sends a command to the MINE server's console, as if typed there; shows what it answers.
+#   sudo mine-cmd whitelist add Alex
+#   sudo mine-cmd op Teacher
+#   sudo mine-cmd say The lesson starts in 5 minutes
+[ $# -gt 0 ] || { echo "usage: mine-cmd <command>" >&2; exit 2; }
+[ -p /run/mine-server/console ] || { echo "The MINE server isn't running (systemctl start mine-server)" >&2; exit 1; }
+# Where the log is now: only what comes after it is the answer.
+cursor="$(journalctl -u mine-server -n 1 --show-cursor --no-pager -o cat | sed -n 's/^-- cursor: //p')"
+printf '%s\n' "$*" > /run/mine-server/console
+# The answer reaches the log in a moment: wait for it (up to 5 seconds), then for what follows.
+answer() {
+	if [ -n "$cursor" ]; then
+		journalctl -u mine-server --after-cursor "$cursor" --no-pager -o cat
+	else
+		journalctl -u mine-server --since "-5s" --no-pager -o cat
+	fi
+}
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+	sleep 0.5
+	[ -n "$(answer)" ] && { sleep 0.5; break; }
+done
+answer

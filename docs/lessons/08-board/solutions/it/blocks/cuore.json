@@ -1,0 +1,82 @@
+{
+	"blocks": {
+		"languageVersion": 0,
+		"blocks": [
+			{
+				"type": "controls_whileUntil",
+				"fields": {
+					"MODE": "WHILE"
+				},
+				"inputs": {
+					"BOOL": {
+						"block": {
+							"type": "logic_boolean",
+							"fields": {
+								"BOOL": "TRUE"
+							}
+						}
+					},
+					"DO": {
+						"block": {
+							"type": "mine_wait_signal",
+							"next": {
+								"block": {
+									"type": "controls_if",
+									"inputs": {
+										"IF0": {
+											"block": {
+												"type": "mine_get_signal",
+												"fields": {
+													"SIDE": "left"
+												}
+											}
+										},
+										"DO0": {
+											"block": {
+												"type": "mine_device_send",
+												"fields": {
+													"KEY": "cuore"
+												},
+												"inputs": {
+													"VALUE": {
+														"block": {
+															"type": "math_number",
+															"fields": {
+																"NUM": 1
+															}
+														}
+													}
+												}
+											}
+										},
+										"ELSE": {
+											"block": {
+												"type": "mine_device_send",
+												"fields": {
+													"KEY": "cuore"
+												},
+												"inputs": {
+													"VALUE": {
+														"block": {
+															"type": "math_number",
+															"fields": {
+																"NUM": 0
+															}
+														}
+													}
+												}
+											}
+										}
+									},
+									"extraState": {
+										"hasElse": true
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		]
+	}
+}

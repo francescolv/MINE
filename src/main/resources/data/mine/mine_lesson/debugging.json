@@ -1,0 +1,76 @@
+{
+	"format": 1,
+	"order": 3,
+	"title": "Debugging: fix Byte's programs",
+	"reflection": "Which bug was hardest to find? How did you find it?",
+	"steps": [
+		{
+			"id": "typo",
+			"goal": "Your Byte has three new programs. Start with broken_row: run it, read the error, and fix it so that it builds a row of 6 blocks.",
+			"block_goal": "MINE has put three broken programs among your programs (the \"My programs\" menu). Start with broken_row: run it, watch Byte, and fix it so that it builds a row of 6 blocks.",
+			"not_yet": "Not yet: the row needs 6 blocks in a straight line. Does broken_row still stop with an error?",
+			"hints": [
+				"Read the error: the number after the program's name is the line where Lua stopped. Open the program with edit broken_row and go to that line.",
+				"Lua tells capital and small letters apart: compare that line with the instructions you used in the loops lesson."
+			],
+			"block_hints": [
+				"Watch where the block ends up: in front of Byte, in the air. Which block decides where the blocks go?",
+				"The place a block block has a menu: in front, above, below. Which one makes a row on the ground?"
+			],
+			"give": {
+				"item": "minecraft:oak_planks",
+				"count": 64
+			},
+			"check": {
+				"type": "build",
+				"length": 6
+			}
+		},
+		{
+			"id": "missing_end",
+			"goal": "Now broken_floor: Lua won't even start it. Fix it so that it builds a floor 4 blocks long and 3 wide.",
+			"block_goal": "Now broken_floor: it builds, but the wrong shape. Fix it so that it builds a floor 4 blocks long and 3 wide.",
+			"not_yet": "Not yet: the floor must be 4 blocks long and 3 wide, 12 blocks in all.",
+			"hints": [
+				"The message says \"Expected end\": something was opened and never closed. Every for needs its own end.",
+				"Lua points at line 3, but the missing end belongs to another loop. Which loop isn't closed? The indentation helps."
+			],
+			"block_hints": [
+				"Read MINE's measurements: the floor is 3 tall, so every row is one block higher than the one before. Which block makes Byte go up?",
+				"move up must happen once, before the rows: drag it out of the repeat and put it above it."
+			],
+			"give": {
+				"item": "minecraft:oak_planks",
+				"count": 64
+			},
+			"check": {
+				"type": "build",
+				"length": 4,
+				"width": 3
+			}
+		},
+		{
+			"id": "wrong_size",
+			"goal": "Last one: broken_square runs without errors, but it should build a square 4 × 4. Run it, look at what it builds, and fix it.",
+			"block_goal": "Last one: broken_square should build a square 4 × 4. Run it, look at what it builds, and fix it.",
+			"not_yet": "Not yet: the square must be 4 blocks long and 4 wide, 16 blocks in all.",
+			"hints": [
+				"No error message this time: compare what Byte built with the goal. How many blocks are in one row?",
+				"Each row has two loops, one going forward and one coming back: they must repeat the same number of times."
+			],
+			"block_hints": [
+				"Compare what Byte built with the goal: how many blocks are in one row?",
+				"Each row has two repeat blocks, one going forward and one coming back: they must repeat the same number of times."
+			],
+			"give": {
+				"item": "minecraft:oak_planks",
+				"count": 64
+			},
+			"check": {
+				"type": "build",
+				"length": 4,
+				"width": 4
+			}
+		}
+	]
+}

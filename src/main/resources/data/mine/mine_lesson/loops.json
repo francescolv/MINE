@@ -1,0 +1,75 @@
+{
+	"format": 1,
+	"order": 2,
+	"title": "Loops: rows, floors and cubes",
+	"reflection": "How many lines would the cube take without loops? What would you change in your program to build a cube 10 blocks wide?",
+	"steps": [
+		{
+			"id": "row",
+			"goal": "Write a program that builds a straight row of 10 blocks, using a for loop.",
+			"block_goal": "Write a program that builds a straight row of 10 blocks, using a repeat block.",
+			"not_yet": "Not yet: build a straight row of 10 blocks, one block high.",
+			"hints": [
+				"byte.placeDown() puts a block under Byte, so first go up one block with byte.up(). MINE has already put the blocks in the highlighted slot.",
+				"for i = 1, 10 do ... end repeats what is inside 10 times. Inside the loop: place a block below, then move forward."
+			],
+			"block_hints": [
+				"The \"place a block below\" block puts a block under Byte, so first \"move up\". MINE has already put the blocks in the highlighted slot.",
+				"\"repeat 10 times\" repeats the blocks inside it. Inside: \"place a block below\", then \"move forward\"."
+			],
+			"give": {
+				"item": "minecraft:oak_planks",
+				"count": 64
+			},
+			"check": {
+				"type": "build",
+				"length": 10
+			}
+		},
+		{
+			"id": "floor",
+			"goal": "Build a solid floor 5 blocks long and 4 blocks wide. How many blocks does it take?",
+			"not_yet": "Not yet: build a solid floor, 5 blocks long and 4 wide, one block thick.",
+			"hints": [
+				"A floor is 4 rows of 5 blocks: put the loop for one row inside another loop. How many blocks does it take? Area = 5 × 4 = 20.",
+				"After each row: go back to the start of the row with byte.back() 5 times (another loop), then turn right, move forward one block and turn left."
+			],
+			"block_hints": [
+				"A floor is 4 rows of 5 blocks: put the \"repeat\" of one row inside another \"repeat\". How many blocks does it take? Area = 5 × 4 = 20.",
+				"After each row, still inside the outer \"repeat\": \"repeat 5 times\" \"move back\", then \"turn right\", \"move forward\" and \"turn left\"."
+			],
+			"give": {
+				"item": "minecraft:oak_planks",
+				"count": 64
+			},
+			"check": {
+				"type": "build",
+				"length": 5,
+				"width": 4
+			}
+		},
+		{
+			"id": "cube",
+			"goal": "Build a solid cube 3 blocks long, 3 wide and 3 tall. How many blocks does it take?",
+			"not_yet": "Not yet: build a solid cube, 3 × 3 × 3, with no holes.",
+			"hints": [
+				"A cube is 3 floors stacked on top of each other: put your floor inside a third loop. Volume = 3 × 3 × 3 = 27 blocks.",
+				"Start every layer by going up one block. After a layer, go back to its first row: turn left, move forward 3 blocks, turn right."
+			],
+			"block_hints": [
+				"A cube is 3 floors stacked on top of each other: put your floor inside a third \"repeat\". Volume = 3 × 3 × 3 = 27 blocks.",
+				"Start every layer with \"move up\". After a layer, go back to its first row: \"turn left\", \"repeat 3 times\" \"move forward\", \"turn right\"."
+			],
+			"give": {
+				"item": "minecraft:oak_planks",
+				"count": 64
+			},
+			"check": {
+				"type": "build",
+				"length": 3,
+				"width": 3,
+				"height": 3
+			}
+		}
+	]
+}

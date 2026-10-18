@@ -1,0 +1,51 @@
+{
+	"format": 1,
+	"order": 13,
+	"title": "Python: automatic control (micro:bit)",
+	"reflection": "Your greenhouse switched its fan on and off by itself, without flickering. Where else does a machine decide by itself with a threshold (a fridge, a heater, street lights)? Why do they need a gap between on and off?",
+	"steps": [
+		{
+			"id": "threshold",
+			"goal": "In Python. The micro:bit measures the temperature and sends it (temperatura). The lamp behind Byte is the greenhouse's fan: it must be on from 28 degrees up, off below. MINE plays the temperatures to test it.",
+			"not_yet": "Not yet: the fan (the lamp behind Byte) must be on from 28 degrees up, and off below.",
+			"hints": [
+				"key, temperature = mine.device.wait(\"temperatura\") inside while True:.",
+				"redstone.setOutput(\"back\", temperature >= 28): the comparison is already True or False."
+			],
+			"check": {
+				"type": "fan",
+				"on": 28,
+				"off": 27
+			}
+		},
+		{
+			"id": "hysteresis",
+			"goal": "With one threshold, at 27-28 degrees the fan would switch on and off all the time. Hysteresis: on at 28 or more, off at 24 or less, and in between it stays as it was.",
+			"not_yet": "Not yet: on at 28 or more, off at 24 or less, and in between the fan stays as it was.",
+			"hints": [
+				"A variable remembers whether the fan is on (on = False before the loop): the program needs a memory.",
+				"if temperature >= 28: on = True, elif temperature <= 24: on = False, and nothing in between; then redstone.setOutput(\"back\", on)."
+			],
+			"check": {
+				"type": "fan",
+				"on": 28,
+				"off": 24
+			}
+		},
+		{
+			"id": "manual",
+			"goal": "The gardener's button: button A on the micro:bit (pulsante_a) switches manual mode on and off. In manual mode the fan is always on; in automatic mode it works as before.",
+			"not_yet": "Not yet: button A switches manual mode (fan always on) on and off; otherwise the fan works as in step 2.",
+			"hints": [
+				"key, value = mine.device.wait() with no key waits for anything from the board: look at key to know what arrived.",
+				"if key == \"pulsante_a\": manual = not manual. At the end of each turn: redstone.setOutput(\"back\", on or manual)."
+			],
+			"check": {
+				"type": "fan",
+				"on": 28,
+				"off": 24,
+				"button": true
+			}
+		}
+	]
+}

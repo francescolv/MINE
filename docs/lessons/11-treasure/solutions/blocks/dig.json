@@ -1,0 +1,196 @@
+{
+	"blocks": {
+		"languageVersion": 0,
+		"blocks": [
+			{
+				"type": "variables_set",
+				"fields": {
+					"VAR": {
+						"id": "var_forward"
+					}
+				},
+				"inputs": {
+					"VALUE": {
+						"block": {
+							"type": "mine_challenge_at",
+							"fields": {
+								"N": 1
+							}
+						}
+					}
+				},
+				"next": {
+					"block": {
+						"type": "variables_set",
+						"fields": {
+							"VAR": {
+								"id": "var_right"
+							}
+						},
+						"inputs": {
+							"VALUE": {
+								"block": {
+									"type": "mine_challenge_at",
+									"fields": {
+										"N": 2
+									}
+								}
+							}
+						},
+						"next": {
+							"block": {
+								"type": "controls_repeat_ext",
+								"inputs": {
+									"TIMES": {
+										"block": {
+											"type": "variables_get",
+											"fields": {
+												"VAR": {
+													"id": "var_forward"
+												}
+											}
+										}
+									},
+									"DO": {
+										"block": {
+											"type": "mine_move",
+											"fields": {
+												"WAY": "forward"
+											}
+										}
+									}
+								},
+								"next": {
+									"block": {
+										"type": "mine_turn",
+										"fields": {
+											"WAY": "Right"
+										},
+										"next": {
+											"block": {
+												"type": "controls_repeat_ext",
+												"inputs": {
+													"TIMES": {
+														"block": {
+															"type": "variables_get",
+															"fields": {
+																"VAR": {
+																	"id": "var_right"
+																}
+															}
+														}
+													},
+													"DO": {
+														"block": {
+															"type": "mine_move",
+															"fields": {
+																"WAY": "forward"
+															}
+														}
+													}
+												},
+												"next": {
+													"block": {
+														"type": "mine_dig",
+														"fields": {
+															"WHERE": "Down"
+														},
+														"next": {
+															"block": {
+																"type": "controls_repeat_ext",
+																"inputs": {
+																	"TIMES": {
+																		"block": {
+																			"type": "variables_get",
+																			"fields": {
+																				"VAR": {
+																					"id": "var_right"
+																				}
+																			}
+																		}
+																	},
+																	"DO": {
+																		"block": {
+																			"type": "mine_move",
+																			"fields": {
+																				"WAY": "back"
+																			}
+																		}
+																	}
+																},
+																"next": {
+																	"block": {
+																		"type": "mine_turn",
+																		"fields": {
+																			"WAY": "Left"
+																		},
+																		"next": {
+																			"block": {
+																				"type": "controls_repeat_ext",
+																				"inputs": {
+																					"TIMES": {
+																						"block": {
+																							"type": "variables_get",
+																							"fields": {
+																								"VAR": {
+																									"id": "var_forward"
+																								}
+																							}
+																						}
+																					},
+																					"DO": {
+																						"block": {
+																							"type": "mine_move",
+																							"fields": {
+																								"WAY": "back"
+																							}
+																						}
+																					}
+																				},
+																				"next": {
+																					"block": {
+																						"type": "mine_say",
+																						"inputs": {
+																							"TEXT": {
+																								"block": {
+																									"type": "text",
+																									"fields": {
+																										"TEXT": "Treasure found, and back home!"
+																									}
+																								}
+																							}
+																						}
+																					}
+																				}
+																			}
+																		}
+																	}
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"x": 20,
+				"y": 20
+			}
+		]
+	},
+	"variables": [
+		{
+			"name": "forward",
+			"id": "var_forward"
+		},
+		{
+			"name": "right",
+			"id": "var_right"
+		}
+	]
+}

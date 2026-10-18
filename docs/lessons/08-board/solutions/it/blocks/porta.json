@@ -1,0 +1,100 @@
+{
+	"blocks": {
+		"languageVersion": 0,
+		"blocks": [
+			{
+				"type": "mine_set_signal",
+				"fields": {
+					"SIDE": "front"
+				},
+				"inputs": {
+					"ON": {
+						"block": {
+							"type": "logic_boolean",
+							"fields": {
+								"BOOL": "FALSE"
+							}
+						}
+					}
+				},
+				"next": {
+					"block": {
+						"type": "controls_whileUntil",
+						"fields": {
+							"MODE": "WHILE"
+						},
+						"inputs": {
+							"BOOL": {
+								"block": {
+									"type": "logic_boolean",
+									"fields": {
+										"BOOL": "TRUE"
+									}
+								}
+							},
+							"DO": {
+								"block": {
+									"type": "mine_device_wait",
+									"fields": {
+										"KEY": "pulsante_a"
+									},
+									"next": {
+										"block": {
+											"type": "mine_set_signal",
+											"fields": {
+												"SIDE": "front"
+											},
+											"inputs": {
+												"ON": {
+													"block": {
+														"type": "logic_boolean",
+														"fields": {
+															"BOOL": "TRUE"
+														}
+													}
+												}
+											},
+											"next": {
+												"block": {
+													"type": "mine_wait",
+													"inputs": {
+														"SECONDS": {
+															"block": {
+																"type": "math_number",
+																"fields": {
+																	"NUM": 3
+																}
+															}
+														}
+													},
+													"next": {
+														"block": {
+															"type": "mine_set_signal",
+															"fields": {
+																"SIDE": "front"
+															},
+															"inputs": {
+																"ON": {
+																	"block": {
+																		"type": "logic_boolean",
+																		"fields": {
+																			"BOOL": "FALSE"
+																		}
+																	}
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		]
+	}
+}

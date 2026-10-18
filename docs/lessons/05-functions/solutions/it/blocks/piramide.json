@@ -1,0 +1,325 @@
+{
+	"blocks": {
+		"languageVersion": 0,
+		"blocks": [
+			{
+				"type": "mine_move",
+				"fields": {
+					"WAY": "up"
+				},
+				"next": {
+					"block": {
+						"type": "procedures_callnoreturn",
+						"extraState": {
+							"name": "quadrato",
+							"params": [
+								"lato"
+							]
+						},
+						"inputs": {
+							"ARG0": {
+								"block": {
+									"type": "math_number",
+									"fields": {
+										"NUM": 5
+									}
+								}
+							}
+						},
+						"next": {
+							"block": {
+								"type": "procedures_callnoreturn",
+								"extraState": {
+									"name": "stratoSuccessivo",
+									"params": []
+								},
+								"next": {
+									"block": {
+										"type": "procedures_callnoreturn",
+										"extraState": {
+											"name": "quadrato",
+											"params": [
+												"lato"
+											]
+										},
+										"inputs": {
+											"ARG0": {
+												"block": {
+													"type": "math_number",
+													"fields": {
+														"NUM": 3
+													}
+												}
+											}
+										},
+										"next": {
+											"block": {
+												"type": "procedures_callnoreturn",
+												"extraState": {
+													"name": "stratoSuccessivo",
+													"params": []
+												},
+												"next": {
+													"block": {
+														"type": "procedures_callnoreturn",
+														"extraState": {
+															"name": "quadrato",
+															"params": [
+																"lato"
+															]
+														},
+														"inputs": {
+															"ARG0": {
+																"block": {
+																	"type": "math_number",
+																	"fields": {
+																		"NUM": 1
+																	}
+																}
+															}
+														},
+														"next": {
+															"block": {
+																"type": "mine_say",
+																"inputs": {
+																	"TEXT": {
+																		"block": {
+																			"type": "text",
+																			"fields": {
+																				"TEXT": "Piramide finita: 25 + 9 + 1 = 35 blocchi!"
+																			}
+																		}
+																	}
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"x": 20,
+				"y": 20
+			},
+			{
+				"type": "procedures_defnoreturn",
+				"extraState": {
+					"params": [
+						{
+							"name": "lato",
+							"id": "var_lato"
+						}
+					]
+				},
+				"fields": {
+					"NAME": "quadrato"
+				},
+				"inputs": {
+					"STACK": {
+						"block": {
+							"type": "controls_repeat_ext",
+							"inputs": {
+								"TIMES": {
+									"block": {
+										"type": "variables_get",
+										"fields": {
+											"VAR": {
+												"id": "var_lato"
+											}
+										}
+									}
+								},
+								"DO": {
+									"block": {
+										"type": "controls_repeat_ext",
+										"inputs": {
+											"TIMES": {
+												"block": {
+													"type": "variables_get",
+													"fields": {
+														"VAR": {
+															"id": "var_lato"
+														}
+													}
+												}
+											},
+											"DO": {
+												"block": {
+													"type": "mine_place",
+													"fields": {
+														"WHERE": "Down"
+													},
+													"next": {
+														"block": {
+															"type": "mine_move",
+															"fields": {
+																"WAY": "forward"
+															}
+														}
+													}
+												}
+											}
+										},
+										"next": {
+											"block": {
+												"type": "controls_repeat_ext",
+												"inputs": {
+													"TIMES": {
+														"block": {
+															"type": "variables_get",
+															"fields": {
+																"VAR": {
+																	"id": "var_lato"
+																}
+															}
+														}
+													},
+													"DO": {
+														"block": {
+															"type": "mine_move",
+															"fields": {
+																"WAY": "back"
+															}
+														}
+													}
+												},
+												"next": {
+													"block": {
+														"type": "mine_turn",
+														"fields": {
+															"WAY": "Right"
+														},
+														"next": {
+															"block": {
+																"type": "mine_move",
+																"fields": {
+																	"WAY": "forward"
+																},
+																"next": {
+																	"block": {
+																		"type": "mine_turn",
+																		"fields": {
+																			"WAY": "Left"
+																		}
+																	}
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							},
+							"next": {
+								"block": {
+									"type": "mine_turn",
+									"fields": {
+										"WAY": "Left"
+									},
+									"next": {
+										"block": {
+											"type": "controls_repeat_ext",
+											"inputs": {
+												"TIMES": {
+													"block": {
+														"type": "variables_get",
+														"fields": {
+															"VAR": {
+																"id": "var_lato"
+															}
+														}
+													}
+												},
+												"DO": {
+													"block": {
+														"type": "mine_move",
+														"fields": {
+															"WAY": "forward"
+														}
+													}
+												}
+											},
+											"next": {
+												"block": {
+													"type": "mine_turn",
+													"fields": {
+														"WAY": "Right"
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"x": 20,
+				"y": 420
+			},
+			{
+				"type": "procedures_defnoreturn",
+				"fields": {
+					"NAME": "stratoSuccessivo"
+				},
+				"inputs": {
+					"STACK": {
+						"block": {
+							"type": "mine_move",
+							"fields": {
+								"WAY": "up"
+							},
+							"next": {
+								"block": {
+									"type": "mine_move",
+									"fields": {
+										"WAY": "forward"
+									},
+									"next": {
+										"block": {
+											"type": "mine_turn",
+											"fields": {
+												"WAY": "Right"
+											},
+											"next": {
+												"block": {
+													"type": "mine_move",
+													"fields": {
+														"WAY": "forward"
+													},
+													"next": {
+														"block": {
+															"type": "mine_turn",
+															"fields": {
+																"WAY": "Left"
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"x": 20,
+				"y": 820
+			}
+		]
+	},
+	"variables": [
+		{
+			"name": "lato",
+			"id": "var_lato"
+		}
+	]
+}

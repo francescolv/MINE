@@ -1,0 +1,26 @@
+name: 🍎 Lesson proposal
+description: Are you a teacher? Tell us about a lesson you'd like to run with MINE (any language is fine)
+labels: [lesson]
+body:
+  - type: input
+    id: subject
+    attributes:
+      label: Subject and grade
+      placeholder: "E.g. Math, grade 7 (age 12)"
+    validations:
+      required: true
+  - type: textarea
+    id: goals
+    attributes:
+      label: Learning goals
+    validations:
+      required: true
+  - type: textarea
+    id: activity
+    attributes:
+      label: How it would work in Minecraft
+  - type: textarea
+    id: education
+    attributes:
+      label: Do you already run it with Minecraft Education?
+      description: If so, what do you use (Code Builder, NPCs, Camera...)?

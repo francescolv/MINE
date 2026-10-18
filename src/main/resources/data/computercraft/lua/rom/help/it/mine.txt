@@ -1,0 +1,35 @@
+mine è l'API di MINE, disponibile su Byte (e su ogni turtle).
+Si usa insieme a byte, i movimenti di Byte (vedi "help byte").
+
+Funzioni dell'API mine:
+mine.say( messaggio )
+  Byte scrive il messaggio in chat, e anche nel suo terminale.
+  Lo leggono i giocatori entro 32 blocchi.
+mine.owner()
+  Il nome dello studente a cui appartiene Byte (nil se non ha un proprietario).
+mine.challenge()
+  Cosa chiede questa volta il passo della lezione (es. il lato di un quadrato).
+  Cambia ogni volta che il programma parte: nil se non chiede niente.
+  Più numeri: local a, b = mine.challenge(); mine.challenge(2) è il 2°.
+mine.version()
+  La versione di MINE installata sul server.
+
+mine.device: la scheda (micro:bit, Arduino) sul tuo PC,
+collegata con /mine device. Scrive righe chiave:valore.
+mine.device.read( chiave )
+  L'ultimo valore di chiave (0 se non è mai arrivato).
+mine.device.wait( [chiave] )
+  Aspetta chiave (o una chiave qualsiasi): restituisce chiave, valore.
+mine.device.send( chiave, valore )
+  Scrive chiave:valore sulla scheda.
+mine.device.connected()
+  true se una scheda è collegata.
+
+Byte ha un piccone di diamante: byte.dig(), byte.digUp() e
+byte.digDown() rompono i blocchi e li mettono nel suo inventario.
+
+Dalla chat, /mine byte run <programma> avvia uno dei programmi
+di Byte senza aprire il suo terminale, così lo guardi lavorare.
+
+Esempio:
+mine.say("Ciao! Sono Byte di " .. mine.owner() .. ".")

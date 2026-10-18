@@ -1,0 +1,13 @@
+{
+	"required": true,
+	"package": "io.github.francescolv.mine.clientmixin",
+	"compatibilityLevel": "JAVA_25",
+	"client": [
+		"MinecraftMixin",
+		"TurtleRenderStateAccessor",
+		"TurtleRendererMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

@@ -1,0 +1,53 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MINE · Blocks</title>
+<link rel="stylesheet" href="editor/editor.css">
+</head>
+<body>
+<header>
+	<strong class="brand">MINE</strong>
+	<span id="who"></span>
+	<select id="programs" aria-label="My programs"></select>
+	<label class="name"><span id="name-label"></span> <input id="name" maxlength="24" spellcheck="false"></label>
+	<button id="send"></button>
+	<button id="run" class="primary"></button>
+	<button id="toggle-code"></button>
+	<button id="open-file"></button>
+	<button id="save-file"></button>
+	<a id="python" class="button-link" href="python">Python</a>
+	<input id="file" type="file" accept=".json,application/json" hidden>
+	<select id="students" aria-label="Students' programs" hidden></select>
+	<span id="status" role="status"></span>
+	<div id="viewing" hidden><span id="viewing-text"></span> <button id="copy"></button> <button id="back"></button></div>
+</header>
+<section id="lesson" hidden>
+	<div class="lesson-line">
+		<strong id="lesson-title"></strong>
+		<span id="lesson-step"></span>
+		<span id="lesson-goal"></span>
+		<button id="hint"></button>
+	</div>
+	<ol id="lesson-hints" aria-live="polite"></ol>
+</section>
+<main>
+	<div id="blocks"></div>
+	<section id="code-pane">
+		<div class="code-head">
+			<h2 id="code-title"></h2>
+			<span class="code-switch"><button id="code-lua" class="chosen">Lua</button><button id="code-python">Python</button></span>
+		</div>
+		<pre id="code"></pre>
+		<button id="to-python" class="primary" hidden></button>
+	</section>
+</main>
+<div id="expired" hidden></div>
+<script src="blockly/blockly_compressed.js"></script>
+<script src="blockly/blocks_compressed.js"></script>
+<script src="blockly/lua_compressed.js"></script>
+<script src="blockly/python_compressed.js"></script>
+<script src="editor/editor.js"></script>
+</body>
+</html>

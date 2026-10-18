@@ -1,0 +1,43 @@
+{
+	"schemaVersion": 1,
+	"id": "mine",
+	"version": "${version}",
+	"name": "MINE",
+	"description": "MINE Is Not Education — an open-source learning environment for Minecraft Java, built for schools.",
+	"authors": [
+		"Francesco Lavella"
+	],
+	"contact": {
+		"homepage": "https://francescolv.github.io/MINE/",
+		"sources": "https://github.com/francescolv/MINE",
+		"issues": "https://github.com/francescolv/MINE/issues"
+	},
+	"license": "Apache-2.0",
+	"icon": "assets/mine/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"io.github.francescolv.mine.MineMod"
+		],
+		"client": [
+			"io.github.francescolv.mine.MineModClient"
+		]
+	},
+	"mixins": [
+		"mine.mixins.json",
+		{
+			"config": "mine.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~26.3",
+		"java": ">=25",
+		"fabric-api": "*",
+		"fantasy": "*"
+	},
+	"suggests": {
+		"computercraft": "*"
+	}
+}

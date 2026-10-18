@@ -1,0 +1,129 @@
+{
+	"blocks": {
+		"languageVersion": 0,
+		"blocks": [
+			{
+				"type": "controls_whileUntil",
+				"fields": {
+					"MODE": "UNTIL"
+				},
+				"inputs": {
+					"BOOL": {
+						"block": {
+							"type": "mine_compare",
+							"fields": {
+								"WHERE": ""
+							}
+						}
+					},
+					"DO": {
+						"block": {
+							"type": "mine_turn",
+							"fields": {
+								"WAY": "Right"
+							},
+							"next": {
+								"block": {
+									"type": "controls_whileUntil",
+									"fields": {
+										"MODE": "WHILE"
+									},
+									"inputs": {
+										"BOOL": {
+											"block": {
+												"type": "logic_operation",
+												"fields": {
+													"OP": "AND"
+												},
+												"inputs": {
+													"A": {
+														"block": {
+															"type": "mine_detect",
+															"fields": {
+																"WHERE": ""
+															}
+														}
+													},
+													"B": {
+														"block": {
+															"type": "logic_negate",
+															"inputs": {
+																"BOOL": {
+																	"block": {
+																		"type": "mine_compare",
+																		"fields": {
+																			"WHERE": ""
+																		}
+																	}
+																}
+															}
+														}
+													}
+												}
+											}
+										},
+										"DO": {
+											"block": {
+												"type": "mine_turn",
+												"fields": {
+													"WAY": "Left"
+												}
+											}
+										}
+									},
+									"next": {
+										"block": {
+											"type": "controls_if",
+											"inputs": {
+												"IF0": {
+													"block": {
+														"type": "logic_negate",
+														"inputs": {
+															"BOOL": {
+																"block": {
+																	"type": "mine_compare",
+																	"fields": {
+																		"WHERE": ""
+																	}
+																}
+															}
+														}
+													}
+												},
+												"DO0": {
+													"block": {
+														"type": "mine_move",
+														"fields": {
+															"WAY": "forward"
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"next": {
+					"block": {
+						"type": "mine_say",
+						"inputs": {
+							"TEXT": {
+								"block": {
+									"type": "text",
+									"fields": {
+										"TEXT": "Fuori dal labirinto!"
+									}
+								}
+							}
+						}
+					}
+				},
+				"x": 20,
+				"y": 20
+			}
+		]
+	}
+}

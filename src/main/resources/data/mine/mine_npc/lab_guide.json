@@ -1,0 +1,18 @@
+{
+	"format": 1,
+	"name": "Ada",
+	"pages": {
+		"en_us": [
+			"Welcome to the MINE lab! I'm Ada.\n\nYour lane has a number at the end. Stand on the green square: your Byte appears in front of you.",
+			"@lesson none\nNo lesson yet: wait for your teacher, or try one on your own.\n\n[The lessons](/mine lesson list)",
+			"@lesson first_steps\n@lesson loops\n@lesson debugging\n@lesson conditions\n@lesson functions\n@lesson redstone\n@lesson sensors\n@lesson board\nStuck?\n\n[A hint](/mine lesson hint)\n\n[Byte back here](/mine byte recall)\n\n[Start the lesson over](/mine lesson restart)",
+			"Take a photo of what you build and write what you learnt.\n\n[A camera](/mine camera)\n\n[My portfolio](/mine portfolio)"
+		],
+		"it_it": [
+			"Benvenuto nel laboratorio MINE! Sono Ada.\n\nLa tua corsia ha un numero in fondo. Mettiti sul quadrato verde: il tuo Byte compare davanti a te.",
+			"@lesson none\nNessuna lezione per ora: aspetta l'insegnante, o provane una da solo.\n\n[Le lezioni](/mine lesson list)",
+			"@lesson first_steps\n@lesson loops\n@lesson debugging\n@lesson conditions\n@lesson functions\n@lesson redstone\n@lesson sensors\n@lesson board\nBloccato?\n\n[Un suggerimento](/mine lesson hint)\n\n[Byte qui](/mine byte recall)\n\n[Ricomincia la lezione](/mine lesson restart)",
+			"Fotografa quello che costruisci e scrivi cosa hai imparato.\n\n[Una fotocamera](/mine camera)\n\n[Il mio portfolio](/mine portfolio)"
+		]
+	}
+}

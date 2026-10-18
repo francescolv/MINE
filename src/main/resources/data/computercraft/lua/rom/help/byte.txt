@@ -1,0 +1,33 @@
+Byte is your robot in MINE. byte.<function>() makes it move and build.
+(They are CC: Tweaked's turtle functions: turtle.<function>() works too.)
+
+Moving: true if it moved, false and a reason if something is in the way.
+byte.forward()  byte.back()  byte.up()  byte.down()
+byte.turnLeft()  byte.turnRight()
+
+Building, with the blocks in the selected slot:
+byte.place()  byte.placeUp()  byte.placeDown()
+byte.select( slot )   chooses a slot, 1 to 16
+byte.getItemCount()   how many blocks in the selected slot
+
+Digging, with its diamond pickaxe (the block goes in its inventory):
+byte.dig()  byte.digUp()  byte.digDown()
+
+Looking:
+byte.detect()  byte.detectUp()  byte.detectDown()
+  true if there is a block there
+byte.compare()  byte.compareUp()  byte.compareDown()
+  true if that block is the same as the selected slot's
+byte.inspect()  byte.inspectDown()
+  true and what the block is (its name)
+byte.ripeDown()
+  true if the crop below is ripe (wheat, carrots...)
+
+Example: a row of 5 blocks.
+byte.up()
+for i = 1, 5 do
+  byte.placeDown()
+  byte.forward()
+end
+
+See also: help mine, help redstone.
