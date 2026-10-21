@@ -28,6 +28,9 @@ def _call(name, args):
     return tuple(values)
 
 
+# --- The same in web/python/mine.py and web/python/thonny/mine.py (tools/check-mine-py.js checks it) ---
+
+
 class _Api:
     def __init__(self, prefix):
         self._prefix = prefix
@@ -71,6 +74,9 @@ def _pull_event(*filter):
     # Always a tuple, as in Lua: event[0] is the event's name, also for ("redstone",).
     event = _call("os.pullEvent", list(filter))
     return event if isinstance(event, tuple) else (event,)
+
+
+# --- End of the part they share ---
 
 
 # Waiting is Byte's: time.sleep(3) and os.sleep(3) wait 3 seconds of the game, as os.sleep in Lua;

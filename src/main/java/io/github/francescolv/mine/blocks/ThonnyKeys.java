@@ -1,9 +1,10 @@
 package io.github.francescolv.mine.blocks;
 
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.github.francescolv.mine.DataFormat;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
@@ -63,29 +64,25 @@ public final class ThonnyKeys extends SavedData {
 		return key == null ? null : BY_KEY.get(key.strip().toUpperCase(Locale.ROOT));
 	}
 
+	/** A student's key as saved. */
+	private record Saved(UUID player, String key) {
+		static final Codec<Saved> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+				UUIDUtil.CODEC.fieldOf("Player").forGetter(Saved::player),
+				Codec.STRING.fieldOf("Key").orElse("").forGetter(Saved::key)
+		).apply(instance, Saved::new));
+	}
+
 	public CompoundTag save() {
 		CompoundTag nbt = new CompoundTag();
-		ListTag list = new ListTag();
-		keys.forEach((uuid, key) -> {
-			CompoundTag tag = new CompoundTag();
-			tag.store("Player", UUIDUtil.CODEC, uuid);
-			tag.putString("Key", key);
-			list.add(tag);
-		});
-		nbt.put("Keys", list);
+		DataFormat.writeList(nbt, "Keys", Saved.CODEC, keys.entrySet().stream().map(e -> new Saved(e.getKey(), e.getValue())).toList());
 		return nbt;
 	}
 
 	public static ThonnyKeys fromNbt(CompoundTag nbt) {
 		ThonnyKeys store = new ThonnyKeys();
-		ListTag list = nbt.getListOrEmpty("Keys");
-		for (int i = 0; i < list.size(); i++) {
-			CompoundTag tag = list.getCompoundOrEmpty(i);
-			String key = tag.getStringOr("Key", "");
-			tag.read("Player", UUIDUtil.CODEC).ifPresent(uuid -> {
-				store.keys.put(uuid, key);
-				BY_KEY.put(key, uuid);
-			});
+		for (Saved saved : DataFormat.readList(nbt, "Keys", Saved.CODEC, "Thonny key")) {
+			store.keys.put(saved.player(), saved.key());
+			BY_KEY.put(saved.key(), saved.player());
 		}
 		return store;
 	}

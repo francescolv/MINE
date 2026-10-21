@@ -1,6 +1,5 @@
 package io.github.francescolv.mine.lesson;
 
-import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.mojang.serialization.JsonOps;
 import io.github.francescolv.mine.DataFormat;
@@ -15,7 +14,6 @@ import net.minecraft.server.packs.resources.ResourceManager;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.InputStream;
-import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -81,31 +79,20 @@ public final class Lessons {
 	 */
 	private static List<Lesson> load(ResourceManager manager) {
 		Map<String, Lesson> lessons = new LinkedHashMap<>();
-		for (Map.Entry<Identifier, Resource> file : FINDER.listMatchingResources(manager).entrySet()) {
-			Identifier fileId = FINDER.fileToId(file.getKey());
+		DataFormat.loadJson(manager, FINDER, "lesson", (fileId, json) -> {
 			String id = fileId.getPath();
 			if (!id.matches(ID_PATTERN)) {
 				MineMod.LOGGER.warn("[MINE] Skipping lesson {}: its file name may only use a-z, 0-9 and _", fileId);
-				continue;
+				return;
 			}
-			try (Reader reader = file.getValue().openAsReader()) {
-				JsonElement json = JsonParser.parseReader(reader);
-				String tooNew = DataFormat.tooNew(json);
-				if (tooNew != null) {
-					MineMod.LOGGER.warn("[MINE] Skipping lesson {}: {}", fileId, tooNew);
-					continue;
-				}
-				Lesson.codec(id).parse(JsonOps.INSTANCE, json)
-						.ifSuccess(lesson -> {
-							if (lessons.put(id, lesson) != null) {
-								MineMod.LOGGER.warn("[MINE] Two lessons are called {}: using the one in {}", id, fileId);
-							}
-						})
-						.ifError(error -> MineMod.LOGGER.warn("[MINE] Skipping lesson {}: {}", fileId, error.message()));
-			} catch (Exception e) {
-				MineMod.LOGGER.warn("[MINE] Skipping lesson {}: {}", fileId, e.getMessage());
-			}
-		}
+			Lesson.codec(id).parse(JsonOps.INSTANCE, json)
+					.ifSuccess(lesson -> {
+						if (lessons.put(id, lesson) != null) {
+							MineMod.LOGGER.warn("[MINE] Two lessons are called {}: using the one in {}", id, fileId);
+						}
+					})
+					.ifError(error -> MineMod.LOGGER.warn("[MINE] Skipping lesson {}: {}", fileId, error.message()));
+		});
 		Map<String, Map<String, Map<String, String>>> files = loadFiles(manager, FILES, ".lua");
 		Map<String, Map<String, Map<String, String>>> blocks = loadFiles(manager, BLOCK_FILES, "");
 		blocks.forEach((id, byLanguage) -> byLanguage.forEach((language, programs) -> programs.entrySet().removeIf(program -> {

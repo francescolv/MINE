@@ -115,6 +115,12 @@ public final class Zones extends SavedData {
 	public enum Result { DONE, BAD_NAME, EXISTS, NO_CORNERS, TOO_BIG, NO_ZONE, NO_WORLD, NO_SNAPSHOT, FAILED }
 
 	private final Map<String, Zone> zones = new java.util.TreeMap<>();
+	/**
+	 * The protected zones of each world, for {@link #protectedAt} (asked for every block an
+	 * explosion or a fire touches); {@code null} after a change, made again when asked.
+	 */
+	@Nullable
+	private Map<ResourceKey<Level>, List<Zone>> protectedZones;
 
 	/** The corners a teacher has placed, oldest first (at most two), in the world they're in, and when. */
 	private record Corner(ResourceKey<Level> dimension, BlockPos pos, int placed) {
@@ -302,6 +308,7 @@ public final class Zones extends SavedData {
 		Result saved = save(level.getServer(), name);
 		if (saved != Result.DONE) {
 			state.zones.remove(name);
+			state.setDirty();
 			return saved;
 		}
 		MineMod.LOGGER.info("[MINE] Zone {} made in {}: {}", name, level.dimension().identifier(), box);
@@ -457,12 +464,24 @@ public final class Zones extends SavedData {
 		if (level.getServer() == null) {
 			return null;
 		}
-		for (Zone zone : get(level.getServer()).zones.values()) {
-			if (zone.protect() && zone.contains(level, pos)) {
+		Zones state = get(level.getServer());
+		if (state.protectedZones == null) {
+			state.protectedZones = state.zones.values().stream().filter(Zone::protect)
+					.collect(java.util.stream.Collectors.groupingBy(Zone::dimension));
+		}
+		for (Zone zone : state.protectedZones.getOrDefault(level.dimension(), List.of())) {
+			if (zone.box().isInside(pos)) {
 				return zone;
 			}
 		}
 		return null;
+	}
+
+	/** Every change to the zones is saved: the protected ones are worked out again too. */
+	@Override
+	public void setDirty() {
+		protectedZones = null;
+		super.setDirty();
 	}
 
 	/** Forgets a zone and its snapshot (the blocks stay as they are). */

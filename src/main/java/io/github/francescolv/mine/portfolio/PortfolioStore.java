@@ -1,9 +1,11 @@
 package io.github.francescolv.mine.portfolio;
 
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.github.francescolv.mine.DataFormat;
+import io.github.francescolv.mine.Exports;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
@@ -14,10 +16,12 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.IntStream;
 
 /**
  * Students' portfolios and the class galleries, saved in the world ({@code data/mine/portfolio.dat});
@@ -139,7 +143,7 @@ public final class PortfolioStore extends SavedData {
 			currentGallery = "";
 		}
 		setDirty();
-		deleteFolder(folder(server, album.key()));
+		Exports.deleteFolder(folder(server, album.key()));
 		return true;
 	}
 
@@ -167,64 +171,38 @@ public final class PortfolioStore extends SavedData {
 		}
 	}
 
-	private static void deleteFolder(Path folder) throws IOException {
-		if (!Files.isDirectory(folder)) {
-			return;
-		}
-		try (var files = Files.list(folder)) {
-			for (Path file : files.toList()) {
-				Files.deleteIfExists(file);
-			}
-		}
-		Files.deleteIfExists(folder);
-	}
+
+	private static final Codec<Entry> ENTRY_CODEC = RecordCodecBuilder.create(instance -> instance.group(
+			Codec.STRING.fieldOf("Id").orElse("").forGetter(Entry::id),
+			UUIDUtil.CODEC.fieldOf("Author").forGetter(Entry::author),
+			Codec.STRING.fieldOf("AuthorName").orElse("").forGetter(Entry::authorName),
+			Codec.LONG.fieldOf("Time").orElse(0L).forGetter(Entry::time),
+			Codec.STRING.fieldOf("Photo").orElse("").forGetter(Entry::photo),
+			Codec.STRING.fieldOf("Text").orElse("").forGetter(Entry::text),
+			Codec.STRING.fieldOf("Dimension").orElse("").forGetter(Entry::dimension),
+			Codec.INT_STREAM.xmap(IntStream::toArray, Arrays::stream).fieldOf("Pos").orElse(new int[0])
+					.forGetter(entry -> new int[] { entry.x(), entry.y(), entry.z() }),
+			Codec.STRING.fieldOf("Lesson").orElse("").forGetter(Entry::lesson),
+			Codec.INT.fieldOf("Step").orElse(0).forGetter(Entry::step)
+	).apply(instance, (id, author, authorName, time, photo, text, dimension, pos, lesson, step) -> new Entry(id, author, authorName,
+			time, photo, text, dimension, pos.length == 3 ? pos[0] : 0, pos.length == 3 ? pos[1] : 0, pos.length == 3 ? pos[2] : 0, lesson, step)));
+
+	private static final Codec<Album> ALBUM_CODEC = RecordCodecBuilder.create(instance -> instance.group(
+			Codec.STRING.fieldOf("Key").orElse("").forGetter(Album::key),
+			Codec.STRING.fieldOf("Title").orElse("").forGetter(Album::title),
+			DataFormat.lenientList(ENTRY_CODEC, "portfolio entry").fieldOf("Entries").orElse(List.of()).forGetter(Album::entries)
+	).apply(instance, (key, title, entries) -> new Album(key, title, new ArrayList<>(entries))));
 
 	public CompoundTag save() {
 		CompoundTag nbt = new CompoundTag();
-		ListTag list = new ListTag();
-		for (Album album : albums.values()) {
-			CompoundTag tag = new CompoundTag();
-			tag.putString("Key", album.key());
-			tag.putString("Title", album.title());
-			ListTag entries = new ListTag();
-			for (Entry entry : album.entries()) {
-				CompoundTag e = new CompoundTag();
-				e.putString("Id", entry.id());
-				e.store("Author", UUIDUtil.CODEC, entry.author());
-				e.putString("AuthorName", entry.authorName());
-				e.putLong("Time", entry.time());
-				e.putString("Photo", entry.photo());
-				e.putString("Text", entry.text());
-				e.putString("Dimension", entry.dimension());
-				e.putIntArray("Pos", new int[] { entry.x(), entry.y(), entry.z() });
-				e.putString("Lesson", entry.lesson());
-				e.putInt("Step", entry.step());
-				entries.add(e);
-			}
-			tag.put("Entries", entries);
-			list.add(tag);
-		}
-		nbt.put("Albums", list);
+		DataFormat.writeList(nbt, "Albums", ALBUM_CODEC, albums.values());
 		nbt.putString("CurrentGallery", currentGallery);
 		return nbt;
 	}
 
 	public static PortfolioStore fromNbt(CompoundTag nbt) {
 		PortfolioStore store = new PortfolioStore();
-		ListTag list = nbt.getListOrEmpty("Albums");
-		for (int i = 0; i < list.size(); i++) {
-			CompoundTag tag = list.getCompoundOrEmpty(i);
-			List<Entry> entries = new ArrayList<>();
-			ListTag entryList = tag.getListOrEmpty("Entries");
-			for (int j = 0; j < entryList.size(); j++) {
-				CompoundTag e = entryList.getCompoundOrEmpty(j);
-				int[] pos = e.getIntArray("Pos").orElse(new int[0]);
-				entries.add(new Entry(e.getStringOr("Id", ""), e.read("Author", UUIDUtil.CODEC).orElseThrow(), e.getStringOr("AuthorName", ""), e.getLongOr("Time", 0L),
-						e.getStringOr("Photo", ""), e.getStringOr("Text", ""), e.getStringOr("Dimension", ""),
-						pos.length == 3 ? pos[0] : 0, pos.length == 3 ? pos[1] : 0, pos.length == 3 ? pos[2] : 0,
-						e.getStringOr("Lesson", ""), e.getIntOr("Step", 0)));
-			}
-			Album album = new Album(tag.getStringOr("Key", ""), tag.getStringOr("Title", ""), entries);
+		for (Album album : DataFormat.readList(nbt, "Albums", ALBUM_CODEC, "portfolio")) {
 			store.albums.put(album.key(), album);
 		}
 		store.currentGallery = nbt.getStringOr("CurrentGallery", "");

@@ -20,9 +20,7 @@ import net.minecraft.world.level.block.RedstoneLampBlock;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.net.URI;
 import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -277,8 +275,7 @@ public class DeviceGameTest {
 	}
 
 	private static String post(HttpClient http, String url, String json) throws IOException, InterruptedException {
-		HttpResponse<String> response = http.send(HttpRequest.newBuilder(URI.create(url)).header("Content-Type", "application/json")
-				.POST(HttpRequest.BodyPublishers.ofString(json)).build(), HttpResponse.BodyHandlers.ofString());
+		HttpResponse<String> response = http.send(GameTests.post(url, json), HttpResponse.BodyHandlers.ofString());
 		return response.statusCode() + " " + response.body();
 	}
 }

@@ -121,11 +121,6 @@ public record Lesson(String id, int order, String title, String reflection, List
 		return text(s.id() + ".goal", s.goal());
 	}
 
-	/** The goal as the block editor shows it. */
-	public Component blockGoalText(int step) {
-		return goalText(step, Language.BLOCKS);
-	}
-
 	/** The language a student writes in: hints and goals have their own words in each, when the step has them. */
 	public enum Language { LUA, BLOCKS, PYTHON }
 
@@ -137,11 +132,6 @@ public record Lesson(String id, int order, String title, String reflection, List
 			case PYTHON -> s.pythonGoal().map(goal -> text(s.id() + ".python_goal", goal)).orElseGet(() -> goalText(step));
 			case LUA -> goalText(step);
 		};
-	}
-
-	/** How many hints a step has, for Lua or for blocks. */
-	public int hintCount(int step, boolean blocks) {
-		return hintCount(step, blocks ? Language.BLOCKS : Language.LUA);
 	}
 
 	/** How many hints a step has in {@code language}'s words (Lua's when it has none of its own). */
@@ -163,11 +153,6 @@ public record Lesson(String id, int order, String title, String reflection, List
 	public Component hintText(int step, int n) {
 		Step s = steps.get(step);
 		return text(s.id() + ".hint." + (n + 1), s.hints().get(n));
-	}
-
-	/** Hint number {@code n} (from 0) of a step, in the blocks' words if it has them. */
-	public Component hintText(int step, int n, boolean blocks) {
-		return hintText(step, n, blocks ? Language.BLOCKS : Language.LUA);
 	}
 
 	/** Hint number {@code n} (from 0) of a step, in {@code language}'s words if it has them. */

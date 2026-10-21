@@ -1,9 +1,10 @@
 package io.github.francescolv.mine.blocks;
 
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.github.francescolv.mine.DataFormat;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
@@ -94,41 +95,38 @@ public final class BlockPrograms extends SavedData {
 		return Map.copyOf(students);
 	}
 
+	/** A program as saved: its name and its blocks. */
+	private record SavedProgram(String name, String workspace) {
+		static final Codec<SavedProgram> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+				Codec.STRING.fieldOf("Name").orElse("").forGetter(SavedProgram::name),
+				Codec.STRING.fieldOf("Workspace").orElse("").forGetter(SavedProgram::workspace)
+		).apply(instance, SavedProgram::new));
+	}
+
+	/** A student's programs as saved, oldest first. */
+	private record SavedStudent(UUID player, String name, String last, List<SavedProgram> programs) {
+		static final Codec<SavedStudent> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+				UUIDUtil.CODEC.fieldOf("Player").forGetter(SavedStudent::player),
+				Codec.STRING.fieldOf("Name").orElse("").forGetter(SavedStudent::name),
+				Codec.STRING.fieldOf("Last").orElse("").forGetter(SavedStudent::last),
+				DataFormat.lenientList(SavedProgram.CODEC, "program").fieldOf("Programs").orElse(List.of()).forGetter(SavedStudent::programs)
+		).apply(instance, SavedStudent::new));
+	}
+
 	public CompoundTag save() {
 		CompoundTag nbt = new CompoundTag();
-		ListTag list = new ListTag();
-		students.forEach((uuid, student) -> {
-			CompoundTag tag = new CompoundTag();
-			tag.store("Player", UUIDUtil.CODEC, uuid);
-			tag.putString("Name", student.name());
-			tag.putString("Last", student.last());
-			ListTag programs = new ListTag();
-			student.programs().forEach((name, workspace) -> {
-				CompoundTag program = new CompoundTag();
-				program.putString("Name", name);
-				program.putString("Workspace", workspace);
-				programs.add(program);
-			});
-			tag.put("Programs", programs);
-			list.add(tag);
-		});
-		nbt.put("Students", list);
+		DataFormat.writeList(nbt, "Students", SavedStudent.CODEC, students.entrySet().stream().map(e -> new SavedStudent(e.getKey(),
+				e.getValue().name(), e.getValue().last(), e.getValue().programs().entrySet().stream()
+						.map(program -> new SavedProgram(program.getKey(), program.getValue())).toList())).toList());
 		return nbt;
 	}
 
 	public static BlockPrograms fromNbt(CompoundTag nbt) {
 		BlockPrograms store = new BlockPrograms();
-		ListTag list = nbt.getListOrEmpty("Students");
-		for (int i = 0; i < list.size(); i++) {
-			CompoundTag tag = list.getCompoundOrEmpty(i);
+		for (SavedStudent saved : DataFormat.readList(nbt, "Students", SavedStudent.CODEC, "student's programs")) {
 			LinkedHashMap<String, String> programs = new LinkedHashMap<>();
-			ListTag programList = tag.getListOrEmpty("Programs");
-			for (int j = 0; j < programList.size(); j++) {
-				CompoundTag program = programList.getCompoundOrEmpty(j);
-				programs.put(program.getStringOr("Name", ""), program.getStringOr("Workspace", ""));
-			}
-			tag.read("Player", UUIDUtil.CODEC).ifPresent(uuid -> store.students.put(uuid,
-					new Student(tag.getStringOr("Name", ""), programs, tag.getStringOr("Last", ""))));
+			saved.programs().forEach(program -> programs.put(program.name(), program.workspace()));
+			store.students.put(saved.player(), new Student(saved.name(), programs, saved.last()));
 		}
 		return store;
 	}

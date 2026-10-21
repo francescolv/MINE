@@ -22,16 +22,21 @@ jobs:
         with:
           java-version: '25'
           distribution: 'temurin'
+          cache: gradle
 
       - name: Check the tag matches mod_version
         run: |
           version="$(sed -n 's/^mod_version=//p' gradle.properties)"
           [ "$GITHUB_REF_NAME" = "v$version" ] || { echo "Tag $GITHUB_REF_NAME, but gradle.properties says $version"; exit 1; }
 
-      - name: Build and test
+      - name: Lessons with blocks, English texts and the two mine.py are up to date
         run: |
-          chmod +x gradlew
-          ./gradlew build modpack serverPack runGametest
+          node tools/blocks-to-lua.js --check
+          node tools/check-lang.js
+          node tools/check-mine-py.js
+
+      - name: Build and test
+        run: ./gradlew build modpack serverPack runGametest
 
       - name: Publish the release
         env:

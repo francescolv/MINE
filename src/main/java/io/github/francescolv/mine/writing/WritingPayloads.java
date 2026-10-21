@@ -1,6 +1,6 @@
 package io.github.francescolv.mine.writing;
 
-import io.github.francescolv.mine.MineMod;
+import io.github.francescolv.mine.MinePayloads;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -9,7 +9,6 @@ import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.Identifier;
 
 import java.util.List;
 import java.util.UUID;
@@ -34,13 +33,13 @@ public final class WritingPayloads {
 		NPC, BOARD
 	}
 
-	private static final StreamCodec<io.netty.buffer.ByteBuf, Kind> KIND = ByteBufCodecs.VAR_INT.map(i -> Kind.values()[i], Kind::ordinal);
+	private static final StreamCodec<io.netty.buffer.ByteBuf, Kind> KIND = MinePayloads.enumCodec(Kind.class);
 	private static final StreamCodec<io.netty.buffer.ByteBuf, List<String>> PAGES =
 			ByteBufCodecs.stringUtf8(MAX_PAGE * 4).apply(ByteBufCodecs.list(MAX_PAGES));
 
 	/** Opens the window: {@code target} is the NPC or the board. */
 	public record Open(Kind kind, UUID target, Component title, List<String> pages) implements CustomPacketPayload {
-		public static final Type<Open> ID = new Type<>(Identifier.fromNamespaceAndPath(MineMod.MOD_ID, "writing_open"));
+		public static final Type<Open> ID = MinePayloads.type("writing_open");
 		public static final StreamCodec<RegistryFriendlyByteBuf, Open> CODEC = StreamCodec.composite(
 				KIND, Open::kind, UUIDUtil.STREAM_CODEC, Open::target, ComponentSerialization.STREAM_CODEC, Open::title,
 				PAGES, Open::pages, Open::new);
@@ -53,7 +52,7 @@ public final class WritingPayloads {
 
 	/** The text written in the window. */
 	public record Save(Kind kind, UUID target, List<String> pages) implements CustomPacketPayload {
-		public static final Type<Save> ID = new Type<>(Identifier.fromNamespaceAndPath(MineMod.MOD_ID, "writing_save"));
+		public static final Type<Save> ID = MinePayloads.type("writing_save");
 		public static final StreamCodec<RegistryFriendlyByteBuf, Save> CODEC = StreamCodec.composite(
 				KIND, Save::kind, UUIDUtil.STREAM_CODEC, Save::target, PAGES, Save::pages, Save::new);
 
@@ -65,7 +64,7 @@ public final class WritingPayloads {
 
 	/** The player right-clicked the text of {@code board}. */
 	public record BoardClick(UUID board) implements CustomPacketPayload {
-		public static final Type<BoardClick> ID = new Type<>(Identifier.fromNamespaceAndPath(MineMod.MOD_ID, "board_click"));
+		public static final Type<BoardClick> ID = MinePayloads.type("board_click");
 		public static final StreamCodec<RegistryFriendlyByteBuf, BoardClick> CODEC = StreamCodec.composite(
 				UUIDUtil.STREAM_CODEC, BoardClick::board, BoardClick::new);
 

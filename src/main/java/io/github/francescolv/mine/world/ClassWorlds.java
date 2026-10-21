@@ -1,6 +1,7 @@
 package io.github.francescolv.mine.world;
 
 import io.github.francescolv.mine.DataFormat;
+import io.github.francescolv.mine.Exports;
 import io.github.francescolv.mine.MineMod;
 import io.github.francescolv.mine.lab.Lab;
 import io.github.francescolv.mine.zone.Zones;
@@ -41,13 +42,13 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
@@ -217,7 +218,7 @@ public final class ClassWorlds extends SavedData {
 			}
 			Path target = folder(server, name);
 			try {
-				deleteFolder(target);
+				Exports.deleteFolder(target);
 				for (String part : MAP_PARTS) {
 					if (Files.isDirectory(overworld.resolve(part))) {
 						copyFolder(overworld.resolve(part), target.resolve(part));
@@ -346,8 +347,22 @@ public final class ClassWorlds extends SavedData {
 		player.teleportTo(level, pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, Set.<Relative>of(), yaw, 0, true);
 	}
 
+	/** The last list of maps (usable ones, then all), and when it was made: commands suggest them at every key. */
+	private static final Map<Boolean, List<String>> MAPS_SEEN = new ConcurrentHashMap<>();
+	private static volatile long mapsSeenAt;
+	private static final long MAPS_FRESH_MS = 5000;
+
 	/** The maps a class world can be made from: the folders in {@link #MAPS} that hold a Java world. */
 	public static List<String> maps(MinecraftServer server, boolean usableOnly) {
+		long now = System.currentTimeMillis();
+		if (now - mapsSeenAt > MAPS_FRESH_MS) {
+			MAPS_SEEN.clear();
+			mapsSeenAt = now;
+		}
+		return MAPS_SEEN.computeIfAbsent(usableOnly, usable -> findMaps(server, usable));
+	}
+
+	private static List<String> findMaps(MinecraftServer server, boolean usableOnly) {
 		Path dir = maps(server);
 		if (!Files.isDirectory(dir)) {
 			return List.of();
@@ -470,18 +485,6 @@ public final class ClassWorlds extends SavedData {
 		}
 	}
 
-	private static void deleteFolder(Path folder) throws IOException {
-		if (!Files.exists(folder)) {
-			return;
-		}
-		try (Stream<Path> files = Files.walk(folder)) {
-			List<Path> all = new ArrayList<>(files.toList());
-			java.util.Collections.reverse(all);
-			for (Path file : all) {
-				Files.delete(file);
-			}
-		}
-	}
 
 	public CompoundTag save() {
 		CompoundTag nbt = new CompoundTag();

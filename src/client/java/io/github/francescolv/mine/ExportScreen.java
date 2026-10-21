@@ -40,8 +40,8 @@ final class ExportScreen extends Screen {
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
 		super.extractRenderState(context, mouseX, mouseY, delta);
-		context.centeredText(font, title, width / 2, height / 2 - 40, 0xFFFFFFFF);
-		context.centeredText(font, Component.literal(file.getFileName().toString()), width / 2, height / 2 - 20, 0xFF55FF55);
-		context.centeredText(font, Component.literal(file.getParent().toString()), width / 2, height / 2 - 8, 0xFFA0A0A0);
+		context.centeredText(font, title, width / 2, height / 2 - 40, MineScreens.WHITE);
+		context.centeredText(font, Component.literal(file.getFileName().toString()), width / 2, height / 2 - 20, MineScreens.GREEN);
+		context.centeredText(font, Component.literal(file.getParent().toString()), width / 2, height / 2 - 8, MineScreens.GRAY);
 	}
 }

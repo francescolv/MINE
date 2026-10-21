@@ -17,8 +17,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * Lesson 9, data from the board: MINE plays the student's board, sending {@code count} numbers
@@ -37,7 +35,6 @@ final class ChartChecks {
 
 	/** Ticks between two numbers, as a board writing twice a second. */
 	private static final int EVERY = 10;
-	private static final Pattern NUMBER = Pattern.compile("-?\\d+");
 
 	private ChartChecks() {
 	}
@@ -74,18 +71,18 @@ final class ChartChecks {
 	}
 
 	/** What both checks share: the numbers, sent while the program runs. */
-	private abstract static class Played implements Check {
+	private interface Played extends Check {
 
-		abstract String key();
+		String key();
 
-		abstract int count();
+		int count();
 
-		abstract int min();
+		int min();
 
-		abstract int max();
+		int max();
 
 		@Override
-		public Object start(AgentProgram program) {
+		default Object start(AgentProgram program) {
 			Run run = new Run(program.world(), program.startPos(), program.startFacing());
 			RandomSource random = program.world().getRandom();
 			for (int i = 0; i < count(); i++) {
@@ -96,19 +93,19 @@ final class ChartChecks {
 		}
 
 		/** Takes away a chart from a previous try: only the blocks where columns go. */
-		void clear(Run run) {
+		default void clear(Run run) {
 		}
 
 		@Override
-		public boolean watch(AgentProgram program, @Nullable Object memo) {
+		default boolean watch(AgentProgram program, @Nullable Object memo) {
 			if (!(memo instanceof Run run) || run.sent >= run.values.size()) {
 				return false;
 			}
 			long now = run.world.getGameTime();
 			if (run.next < 0) {
 				// As for the live checks: the program gets going first.
-				run.next = now + SensorChecks.SETTLE_TICKS;
-				run.settled = System.currentTimeMillis() + SensorChecks.SETTLE_MS;
+				run.next = now + LiveTest.GAME_SETTLE_TICKS;
+				run.settled = System.currentTimeMillis() + LiveTest.GAME_SETTLE_MS;
 			}
 			if (now >= run.next && System.currentTimeMillis() >= run.settled) {
 				Devices.play(run.world.getServer(), program.owner(), key(), Integer.toString(run.values.get(run.sent)));
@@ -120,7 +117,7 @@ final class ChartChecks {
 
 		/** The program ended before MINE had sent all the numbers. */
 		@Nullable
-		Component tooSoon(Run run) {
+		default Component tooSoon(Run run) {
 			return run.sent < run.values.size()
 					? Component.translatableWithFallback("mine.lesson.check.chart_too_soon",
 							"Not yet: your program ended before the board had sent its %s numbers. Wait for each one: mine.device.wait(\"%s\").",
@@ -130,7 +127,7 @@ final class ChartChecks {
 	}
 
 	/** A bar chart of the numbers, as tall as each, or scaled to {@code height}. */
-	static final class Chart extends Played {
+	record Chart(String key, int count, int min, int max, int height) implements Played {
 
 		static final MapCodec<Chart> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
 				Codec.string(1, 32).fieldOf("key").forGetter(Chart::key),
@@ -139,44 +136,6 @@ final class ChartChecks {
 				Codec.intRange(1, 32767).fieldOf("max").forGetter(Chart::max),
 				Codec.intRange(0, 12).optionalFieldOf("height", 0).forGetter(Chart::height)
 		).apply(instance, Chart::new));
-
-		private final String key;
-		private final int count;
-		private final int min;
-		private final int max;
-		private final int height;
-
-		Chart(String key, int count, int min, int max, int height) {
-			this.key = key;
-			this.count = count;
-			this.min = min;
-			this.max = max;
-			this.height = height;
-		}
-
-		@Override
-		String key() {
-			return key;
-		}
-
-		@Override
-		int count() {
-			return count;
-		}
-
-		@Override
-		int min() {
-			return min;
-		}
-
-		@Override
-		int max() {
-			return max;
-		}
-
-		int height() {
-			return height;
-		}
 
 		/** How tall the column of {@code value} must be. */
 		int expected(int value) {
@@ -188,7 +147,7 @@ final class ChartChecks {
 		}
 
 		@Override
-		void clear(Run run) {
+		public void clear(Run run) {
 			for (int i = 0; i < count; i++) {
 				for (int h = 0; h <= tallest() + 1; h++) {
 					BlockPos pos = run.column(i).above(h);
@@ -245,7 +204,7 @@ final class ChartChecks {
 	}
 
 	/** Byte says the largest number and its position, from 1. */
-	static final class Largest extends Played {
+	record Largest(String key, int count, int min, int max) implements Played {
 
 		static final MapCodec<Largest> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
 				Codec.string(1, 32).fieldOf("key").forGetter(Largest::key),
@@ -254,41 +213,9 @@ final class ChartChecks {
 				Codec.intRange(1, 32767).fieldOf("max").forGetter(Largest::max)
 		).apply(instance, Largest::new));
 
-		private final String key;
-		private final int count;
-		private final int min;
-		private final int max;
-
-		Largest(String key, int count, int min, int max) {
-			this.key = key;
-			this.count = count;
-			this.min = min;
-			this.max = max;
-		}
-
-		@Override
-		String key() {
-			return key;
-		}
-
-		@Override
-		int count() {
-			return count;
-		}
-
-		@Override
-		int min() {
-			return min;
-		}
-
-		@Override
-		int max() {
-			return max;
-		}
-
 		@Override
 		public Object start(AgentProgram program) {
-			Run run = (Run) super.start(program);
+			Run run = (Run) Played.super.start(program);
 			// One largest number, so its position is clear.
 			int top = run.values.indexOf(run.values.stream().max(Integer::compare).orElse(0));
 			for (int i = 0; i < run.values.size(); i++) {
@@ -305,11 +232,7 @@ final class ChartChecks {
 
 		private static boolean said(AgentProgram program, int number, int position) {
 			for (String message : program.messages()) {
-				List<Integer> numbers = new ArrayList<>();
-				Matcher matcher = NUMBER.matcher(message);
-				while (matcher.find()) {
-					numbers.add(Integer.parseInt(matcher.group().length() > 6 ? "-1" : matcher.group()));
-				}
+				List<Integer> numbers = Checks.numbers(message);
 				if (numbers.contains(number) && numbers.contains(position)) {
 					return true;
 				}

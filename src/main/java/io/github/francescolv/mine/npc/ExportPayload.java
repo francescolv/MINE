@@ -1,13 +1,12 @@
 package io.github.francescolv.mine.npc;
 
-import io.github.francescolv.mine.MineMod;
+import io.github.francescolv.mine.MinePayloads;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 
 import java.util.Arrays;
@@ -27,7 +26,7 @@ public record ExportPayload(int download, String fileName, int index, int total,
 
 	private static final AtomicInteger DOWNLOADS = new AtomicInteger();
 
-	public static final Type<ExportPayload> ID = new Type<>(Identifier.fromNamespaceAndPath(MineMod.MOD_ID, "export"));
+	public static final Type<ExportPayload> ID = MinePayloads.type("export");
 	public static final StreamCodec<RegistryFriendlyByteBuf, ExportPayload> CODEC = StreamCodec.composite(
 			ByteBufCodecs.VAR_INT, ExportPayload::download,
 			ByteBufCodecs.stringUtf8(255), ExportPayload::fileName,

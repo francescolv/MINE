@@ -6,10 +6,10 @@ import io.github.francescolv.mine.PlayerSounds;
 import io.github.francescolv.mine.permission.Permissions;
 import io.github.francescolv.mine.writing.Writing;
 import io.github.francescolv.mine.writing.WritingPayloads;
+import io.github.francescolv.mine.writing.Placed;
 import net.fabricmc.fabric.api.attachment.v1.AttachmentRegistry;
 import net.fabricmc.fabric.api.attachment.v1.AttachmentType;
 import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
-import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -41,9 +41,7 @@ import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -79,23 +77,8 @@ public final class NpcManager {
 	private NpcManager() {
 	}
 
-	/** When each player last clicked an NPC (game time), to answer a click once. */
-	private static final Map<UUID, Long> LAST_CLICK = new HashMap<>();
-
 	public static void register() {
-		UseEntityCallback.EVENT.register((player, world, hand, entity, hit) -> {
-			if (world.isClientSide() || !isNpc(entity) || !(player instanceof ServerPlayer serverPlayer)) {
-				return InteractionResult.PASS;
-			}
-			// One click can reach the server more than once (for each hand, and on some versions
-			// at a point and then on the entity): answer once per tick, and never let the villager
-			// open its trades.
-			long now = world.getGameTime();
-			if (hand == InteractionHand.MAIN_HAND && !Long.valueOf(now).equals(LAST_CLICK.put(serverPlayer.getUUID(), now))) {
-				interact(serverPlayer, (Villager) entity);
-			}
-			return InteractionResult.SUCCESS;
-		});
+		Placed.onClick(Villager.class, NpcManager::isNpc, NpcManager::interact);
 		// Students play in Creative, where punching ignores invulnerability.
 		AttackEntityCallback.EVENT.register((player, world, hand, entity, hit) ->
 				isNpc(entity) ? InteractionResult.FAIL : InteractionResult.PASS);
@@ -108,9 +91,8 @@ public final class NpcManager {
 	/** Creates an NPC in front of its maker, facing them; {@code null} if there's no room. */
 	@Nullable
 	public static Villager create(ServerPlayer maker, String name) {
-		Direction facing = maker.getDirection();
-		BlockPos pos = maker.blockPosition().relative(facing, 2);
-		Villager npc = create(maker.level(), pos, facing.getOpposite(), maker.getUUID(), name);
+		BlockPos pos = Placed.inFront(maker);
+		Villager npc = create(maker.level(), pos, maker.getDirection().getOpposite(), maker.getUUID(), name);
 		if (npc != null) {
 			MineMod.LOGGER.info("[MINE] {} created the NPC {} at {}", maker.getName().getString(), name, pos.toShortString());
 		}
@@ -154,8 +136,7 @@ public final class NpcManager {
 
 	/** Teachers can change every NPC; builders only the ones they made. */
 	public static boolean canChange(ServerPlayer player, Villager npc) {
-		return Permissions.isTeacher(player)
-				|| (Permissions.isBuilder(player) && player.getUUID().equals(npc.getAttached(MAKER)));
+		return Placed.canChange(player, npc.getAttached(MAKER));
 	}
 
 	/** The dialogue, in English if it comes from a datapack. */
@@ -297,12 +278,8 @@ public final class NpcManager {
 
 	/** A book and quill with the NPC's dialogue, ready to be changed. */
 	public static ItemStack book(Villager npc, @Nullable ServerPlayer reader) {
-		ItemStack book = new ItemStack(Items.WRITABLE_BOOK);
-		List<Filterable<String>> pages = dialogue(npc, reader).stream().map(Filterable::passThrough).toList();
-		book.set(DataComponents.WRITABLE_BOOK_CONTENT, new WritableBookContent(pages));
-		book.set(DataComponents.CUSTOM_NAME, Component.translatableWithFallback("mine.npc.book_name", "Dialogue of %s",
+		return Placed.book(dialogue(npc, reader), Component.translatableWithFallback("mine.npc.book_name", "Dialogue of %s",
 				npc.getDisplayName()));
-		return book;
 	}
 
 	/**
@@ -356,12 +333,11 @@ public final class NpcManager {
 			return;
 		}
 		int at = Math.max(0, visible.indexOf(page));
-		boolean turns = ServerPlayNetworking.canSend(player, PagePayload.ID);
 		int slot = player.getInventory().getSelectedSlot();
-		player.connection.send(new ClientboundSetPlayerInventoryPacket(slot, dialogueBook(npc, pages, turns ? visible : visible.subList(at, visible.size()), notes(player, npc, note), writer)));
+		player.connection.send(new ClientboundSetPlayerInventoryPacket(slot, dialogueBook(npc, pages, visible, notes(player, npc, note), writer)));
 		player.connection.send(new ClientboundOpenBookPacket(InteractionHand.MAIN_HAND));
 		player.connection.send(new ClientboundSetPlayerInventoryPacket(slot, player.getMainHandItem()));
-		if (turns && at > 0) {
+		if (at > 0) {
 			ServerPlayNetworking.send(player, new PagePayload(at));
 		}
 	}
@@ -510,9 +486,6 @@ public final class NpcManager {
 	 */
 	@Nullable
 	static Villager nearest(ServerPlayer player, double distance, boolean teacher) {
-		return player.level().getEntitiesOfClass(Villager.class, player.getBoundingBox().inflate(distance),
-						npc -> isNpc(npc) && (teacher || canChange(player, npc))).stream()
-				.min((a, b) -> Double.compare(a.distanceToSqr(player), b.distanceToSqr(player)))
-				.orElse(null);
+		return Placed.nearest(player, Villager.class, distance, npc -> isNpc(npc) && (teacher || canChange(player, npc)));
 	}
 }

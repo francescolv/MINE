@@ -3,7 +3,6 @@ package io.github.francescolv.mine.gametest;
 import dan200.computercraft.shared.computer.core.ServerComputer;
 import dan200.computercraft.shared.computer.core.ServerContext;
 import dan200.computercraft.shared.turtle.blocks.TurtleBlockEntity;
-import io.github.francescolv.mine.agent.AgentManager;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -78,11 +77,7 @@ public class LessonGameTest {
 
 	private static Run start(GameTestHelper ctx, BlockPos agent, String lesson, String solution, ItemStack firstSlot) {
 		ServerPlayer player = ctx.makeMockServerPlayerInLevel();
-		BlockPos student = ctx.absolutePos(agent.north());
-		player.snapTo(student.getX() + 0.5, student.getY(), student.getZ() + 0.5, 0.0f, 0.0f);
-		ctx.assertTrue(AgentManager.spawn(player) == AgentManager.Result.SPAWNED, "Agent non creato");
-
-		TurtleBlockEntity turtle = ctx.getBlockEntity(agent, TurtleBlockEntity.class);
+		TurtleBlockEntity turtle = GameTests.spawnAgent(ctx, player, agent);
 		turtle.getAccess().getInventory().setItem(0, firstSlot);
 		ServerComputer computer = turtle.createServerComputer();
 

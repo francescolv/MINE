@@ -44,7 +44,7 @@ public final class Devices {
 	/** Lines waiting for a board on Wi-Fi to ask: at most this many, the oldest are dropped. */
 	private static final int OUTBOX = 64;
 
-	private static final Pattern KEY = Pattern.compile("[a-z0-9_]{1,32}");
+	private static final Pattern KEY = Pattern.compile("[a-z0-9_]{1," + MAX_KEY + "}");
 	private static final Pattern NUMBER = Pattern.compile("[+-]?\\d{1,12}");
 
 	/** The last value of each key, per student: an Integer or a String. */
@@ -91,7 +91,7 @@ public final class Devices {
 	public static List<String> wifi(ServerPlayer player, List<String> lines) {
 		UUID student = player.getUUID();
 		WIFI_SEEN.put(student, System.currentTimeMillis());
-		if (!WIFI.equals(CONNECTED.get(student))) {
+		if (!onWifi(student)) {
 			Deque<String> out = new ArrayDeque<>();
 			LAST_SENT.getOrDefault(student, Map.of()).forEach((key, value) -> out.add(key + ":" + value));
 			WIFI_OUT.put(student, out);
@@ -122,7 +122,7 @@ public final class Devices {
 			}
 			WIFI_OUT.remove(entry.getKey());
 			ServerPlayer player = server.getPlayerList().getPlayer(entry.getKey());
-			if (player != null && WIFI.equals(CONNECTED.get(entry.getKey()))) {
+			if (player != null && onWifi(entry.getKey())) {
 				connected(player, "");
 			}
 			return true;
@@ -144,7 +144,7 @@ public final class Devices {
 
 	/** The student's board said {@code key:value}. Returns whether it was taken (not dropped). */
 	public static boolean received(ServerPlayer player, String key, String value) {
-		String name = key.strip().toLowerCase(Locale.ROOT);
+		String name = normalizeKey(key);
 		if (!KEY.matcher(name).matches() || value.length() > MAX_LINE || !allowed(player)) {
 			return false;
 		}
@@ -176,6 +176,11 @@ public final class Devices {
 		}
 	}
 
+	/** A key as boards and programs may write it: without spaces around, in small letters. */
+	private static String normalizeKey(String key) {
+		return key.strip().toLowerCase(Locale.ROOT);
+	}
+
 	/** Whether {@code key} can be a key: letters a-z, digits and _, at most {@value #MAX_KEY}. */
 	public static boolean validKey(String key) {
 		return KEY.matcher(key).matches();
@@ -195,7 +200,7 @@ public final class Devices {
 	@Nullable
 	public static Object read(UUID student, String key) {
 		Map<String, Object> values = VALUES.get(student);
-		return values == null ? null : values.get(key.strip().toLowerCase(Locale.ROOT));
+		return values == null ? null : values.get(normalizeKey(key));
 	}
 
 	/** Whether the student's board is on Wi-Fi now, not on a cable. */
@@ -213,7 +218,7 @@ public final class Devices {
 	 * student has no board connected. Thread-safe: the packet leaves from the server thread.
 	 */
 	public static boolean send(MinecraftServer server, UUID student, String key, String value) {
-		String name = key.strip().toLowerCase(Locale.ROOT);
+		String name = normalizeKey(key);
 		String text = value.replace('\n', ' ').replace('\r', ' ');
 		if (!KEY.matcher(name).matches() || text.length() > MAX_LINE) {
 			return false;
@@ -223,7 +228,7 @@ public final class Devices {
 		if (!isConnected(student)) {
 			return false;
 		}
-		Deque<String> out = WIFI.equals(CONNECTED.get(student)) ? WIFI_OUT.get(student) : null;
+		Deque<String> out = onWifi(student) ? WIFI_OUT.get(student) : null;
 		if (out != null) {
 			synchronized (out) {
 				if (out.size() >= OUTBOX) {

@@ -1,6 +1,5 @@
 plugins {
 	id 'net.fabricmc.fabric-loom' version '1.18.2'
-	id 'maven-publish'
 }
 
 version = project.mod_version
@@ -11,7 +10,7 @@ base {
 }
 
 repositories {
-	// Loom already adds the essential repositories for Minecraft and Yarn.
+	// Loom already adds the repositories for Minecraft and Fabric.
 	maven {
 		name = "SquidDev"
 		url = "https://maven.squiddev.cc"
@@ -73,10 +72,11 @@ dependencies {
 	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
-	// CC: Tweaked: compile against the API, load the full mod in runClient/runServer
+	// CC: Tweaked: compile against the API, load the full mod in runClient/runServer. The full mod
+	// at compile time too: AgentManager uses a few internal classes (turning an Agent on, keeping
+	// its computer), and the tests use more. There's no API for them.
 	compileOnly "cc.tweaked:cc-tweaked-${project.minecraft_version}-fabric-api:${project.cctweaked_version}"
 	runtimeOnly "cc.tweaked:cc-tweaked-${project.minecraft_version}-fabric:${project.cctweaked_version}"
-	// One internal class, to turn an Agent on (AgentManager.powerOn): there's no API for it.
 	compileOnly "cc.tweaked:cc-tweaked-${project.minecraft_version}-fabric:${project.cctweaked_version}"
 	// Fantasy: the class worlds, dimensions made while the server runs. Inside MINE's jar.
 	implementation "xyz.nucleoid:fantasy:${project.fantasy_version}"
@@ -84,8 +84,6 @@ dependencies {
 	// jSerialComm: MINE reads the students' boards (micro:bit, Arduino) on the PC's serial port. Inside MINE's jar.
 	implementation "com.fazecast:jSerialComm:${project.jserialcomm_version}"
 	include "com.fazecast:jSerialComm:${project.jserialcomm_version}"
-	// Tests may use CC: Tweaked internals, the mod may not.
-	gametestCompileOnly "cc.tweaked:cc-tweaked-${project.minecraft_version}-fabric:${project.cctweaked_version}"
 }
 
 java {
@@ -100,10 +98,12 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 processResources {
-	inputs.property "version", project.version
+	def versions = ["version": project.version, "loader_version": project.loader_version,
+			"minecraft_version": project.minecraft_version]
+	inputs.properties versions
 
 	filesMatching("fabric.mod.json") {
-		expand "version": project.version
+		expand versions
 	}
 }
 
@@ -113,23 +113,29 @@ jar {
 	}
 }
 
-publishing {
-	publications {
-		create("mavenJava", MavenPublication) {
-			artifactId = project.archives_base_name
-			from components.java
-		}
-	}
-	repositories {
-		// Add your Maven repository here if and when you decide to publish artifacts
-	}
-}
-
 // The MINE modpack for schools: ./gradlew modpack → build/distributions/MINE-<version>.mrpack
 // One file that Prism Launcher and the Modrinth App install with Fabric, Fabric API, CC: Tweaked
 // and MINE. The mods are pinned in modpack/mods.json (downloaded by the launcher from Modrinth);
 // MINE itself travels inside the pack.
+// The modpack and the server package must hold the versions MINE is built and tested with.
+def checkModpackVersions = tasks.register("checkModpackVersions") {
+	def modsFile = file("modpack/mods.json")
+	def expected = ["fabric-api": project.fabric_version, "cc-tweaked": project.cctweaked_version]
+	inputs.file(modsFile)
+	inputs.properties(expected)
+	doLast {
+		def mods = new groovy.json.JsonSlurper().parse(modsFile).mods
+		expected.each { name, version ->
+			def mod = mods.find { it.name == name }
+			if (mod == null || mod.version != version) {
+				throw new GradleException("modpack/mods.json: $name should be $version (gradle.properties), found ${mod?.version}")
+			}
+		}
+	}
+}
+
 def modpackIndex = tasks.register("modpackIndex") {
+	dependsOn(checkModpackVersions)
 	def modsFile = file("modpack/mods.json")
 	def output = layout.buildDirectory.file("modpack/modrinth.index.json")
 	inputs.file(modsFile)
@@ -139,14 +145,6 @@ def modpackIndex = tasks.register("modpackIndex") {
 	outputs.file(output)
 	doLast {
 		def mods = new groovy.json.JsonSlurper().parse(modsFile).mods
-		// The pack must hold the versions MINE is built and tested with.
-		def expected = ["fabric-api": project.fabric_version, "cc-tweaked": project.cctweaked_version]
-		expected.each { name, version ->
-			def mod = mods.find { it.name == name }
-			if (mod == null || mod.version != version) {
-				throw new GradleException("modpack/mods.json: $name should be $version (gradle.properties), found ${mod?.version}")
-			}
-		}
 		def index = [
 				formatVersion: 1,
 				game         : "minecraft",
@@ -180,6 +178,7 @@ tasks.register("modpack", Zip) {
 // The MINE server package: ./gradlew serverPack → build/distributions/MINE-server-<version>.zip
 // Unzip it on the school server and run install.sh (see docs/guide/server.md).
 def serverModsList = tasks.register("serverModsList") {
+	dependsOn(checkModpackVersions)
 	def modsFile = file("modpack/mods.json")
 	def output = layout.buildDirectory.dir("serverpack")
 	inputs.file(modsFile)
@@ -200,7 +199,6 @@ def serverModsList = tasks.register("serverModsList") {
 tasks.register("serverPack", Zip) {
 	group = "build"
 	description = "Builds the MINE server package: installer, systemd service, backups."
-	dependsOn(modpackIndex)
 	archiveFileName = "MINE-server-${project.version}.zip"
 	destinationDirectory = layout.buildDirectory.dir("distributions")
 	into("MINE-server") {

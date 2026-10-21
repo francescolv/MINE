@@ -1,5 +1,6 @@
 package io.github.francescolv.mine.portfolio;
 
+import io.github.francescolv.mine.ChunkAssembler;
 import io.github.francescolv.mine.MineMod;
 import io.github.francescolv.mine.PlayerSounds;
 import io.github.francescolv.mine.lesson.Lesson;
@@ -19,6 +20,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.Util;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -26,7 +28,6 @@ import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.component.ItemLore;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -36,9 +37,12 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -58,7 +62,7 @@ public final class Portfolios {
 	private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
 	/** Photos still arriving, by student. */
-	private static final Map<UUID, ByteArrayOutputStream> UPLOADS = new HashMap<>();
+	private static final Map<UUID, ChunkAssembler> UPLOADS = new HashMap<>();
 	private static final Map<UUID, Long> LAST_PHOTO = new HashMap<>();
 
 	private Portfolios() {
@@ -71,11 +75,7 @@ public final class Portfolios {
 			if (world.isClientSide() || !isCamera(stack)) {
 				return InteractionResult.PASS;
 			}
-			// The server only explains when the photo can't be taken.
-			if (player instanceof ServerPlayer serverPlayer && !hasMine(serverPlayer)) {
-				serverPlayer.sendOverlayMessage(Component.translatableWithFallback("mine.camera.needs_mine",
-						"The camera needs MINE in your game (the MINE modpack).").withStyle(ChatFormatting.RED));
-			}
+			// The student's MINE takes the photo and sends it.
 			return InteractionResult.SUCCESS;
 		});
 		ServerPlayNetworking.registerGlobalReceiver(PortfolioPayloads.Upload.ID,
@@ -115,17 +115,11 @@ public final class Portfolios {
 		if (piece.total() < 1 || piece.total() > maxPieces || piece.index() >= piece.total()) {
 			return;
 		}
-		ByteArrayOutputStream photo = piece.index() == 0 ? new ByteArrayOutputStream() : UPLOADS.get(student.getUUID());
-		if (photo == null) {
-			return;
+		byte[] photo = ChunkAssembler.receive(UPLOADS, student.getUUID(), piece.index(), piece.total(), piece.data(),
+				PortfolioPayloads.MAX_PHOTO);
+		if (photo != null) {
+			addPhoto(student, photo);
 		}
-		photo.writeBytes(piece.data());
-		if (piece.index() + 1 < piece.total()) {
-			UPLOADS.put(student.getUUID(), photo);
-			return;
-		}
-		UPLOADS.remove(student.getUUID());
-		addPhoto(student, photo.toByteArray());
 	}
 
 	/** Saves a photo in the student's portfolio; {@code null} if it wasn't saved (and they are told why). */
@@ -214,11 +208,15 @@ public final class Portfolios {
 		PortfolioStore store = PortfolioStore.get(player.level().getServer());
 		PortfolioStore.Album gallery = store.currentGallery();
 		boolean own = album.key().equals(PortfolioStore.studentKey(player.getUUID()));
+		Set<String> shared = new HashSet<>();
+		if (own && gallery != null) {
+			gallery.entries().forEach(entry -> shared.add(entry.id()));
+		}
 		List<PortfolioPayloads.EntryView> entries = new ArrayList<>();
 		for (PortfolioStore.Entry entry : album.entries()) {
 			entries.add(new PortfolioPayloads.EntryView(entry.id(), entry.authorName(), entry.isPhoto(), entry.text(),
 					details(entry, album.isGallery(), player.clientInformation().language()), canEdit(player, entry),
-					own && gallery != null && store.entry(gallery, sharedId(entry)) != null));
+					shared.contains(sharedId(entry))));
 		}
 		ServerPlayNetworking.send(player, new PortfolioPayloads.View(album.key(), album.title(), album.isGallery(),
 				canNote(player, album), own && gallery != null ? gallery.title() : "", select, entries));
@@ -258,10 +256,7 @@ public final class Portfolios {
 				case OPEN -> open(player, album, request.entry());
 				case PHOTO -> {
 					if (entry != null && entry.isPhoto()) {
-						Path file = PortfolioStore.folder(server, album.key()).resolve(entry.photo());
-						if (Files.isRegularFile(file) && Files.size(file) <= PortfolioPayloads.MAX_PHOTO) {
-							ServerPlayNetworking.send(player, new PortfolioPayloads.Photo(album.key(), entry.id(), Files.readAllBytes(file)));
-						}
+						sendPhoto(server, player, album.key(), entry);
 					}
 				}
 				case CAPTION -> {
@@ -305,6 +300,23 @@ public final class Portfolios {
 	/** The id of an entry's copy in a gallery: the same entry is shared only once. */
 	static String sharedId(PortfolioStore.Entry entry) {
 		return "s" + entry.id();
+	}
+
+	/** Sends a photo to the player's portfolio window: read from the disk away from the server thread. */
+	private static void sendPhoto(MinecraftServer server, ServerPlayer player, String album, PortfolioStore.Entry entry) {
+		Path file = PortfolioStore.folder(server, album).resolve(entry.photo());
+		CompletableFuture.supplyAsync(() -> {
+			try {
+				return Files.isRegularFile(file) && Files.size(file) <= PortfolioPayloads.MAX_PHOTO ? Files.readAllBytes(file) : null;
+			} catch (IOException e) {
+				MineMod.LOGGER.warn("[MINE] Could not read the photo {}: {}", file, e.toString());
+				return null;
+			}
+		}, Util.ioPool()).thenAcceptAsync(photo -> {
+			if (photo != null && !player.hasDisconnected()) {
+				ServerPlayNetworking.send(player, new PortfolioPayloads.Photo(album, entry.id(), photo));
+			}
+		}, server);
 	}
 
 	/** Copies an entry of the student's portfolio into the current class gallery, if it isn't there yet. */

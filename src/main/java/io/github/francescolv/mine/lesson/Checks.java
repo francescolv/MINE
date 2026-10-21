@@ -16,6 +16,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
@@ -203,7 +207,7 @@ final class Checks {
 				return empty;
 			}
 			return Component.translatableWithFallback("mine.lesson.check.wrong_shape",
-					"Not yet: your Byte built %s blocks, %s long, %s wide and %s tall. Compare it with the goal: what's different?",
+					"Not yet: your Byte built %s blocks: the build is %s long, %s wide and %s tall. Compare it with the goal: what's different?",
 					biggest.blocks(), Math.max(biggest.sizeX(), biggest.sizeZ()),
 					Math.min(biggest.sizeX(), biggest.sizeZ()), biggest.sizeY());
 		}
@@ -214,11 +218,24 @@ final class Checks {
 			return sidesMatch && shape.sizeY() == height && shape.blocks() == length * width * height;
 		}
 
+		/** The shapes found at the end of a program, in the game tick they were looked for: passed() and whyNot() both ask. */
+		private static final Map<Area, List<Shape>> SEEN = new java.util.WeakHashMap<>();
+		private static long seenAt = -1;
+
 		/** The new blocks near the start, split into groups of blocks that touch each other. */
 		private List<Shape> shapes(AgentProgram program, @Nullable Object memo) {
 			if (!(memo instanceof Area area)) {
 				return List.of();
 			}
+			long now = program.world().getGameTime();
+			if (now != seenAt) {
+				SEEN.clear();
+				seenAt = now;
+			}
+			return SEEN.computeIfAbsent(area, built -> findShapes(program, built));
+		}
+
+		private static List<Shape> findShapes(AgentProgram program, Area area) {
 			Set<BlockPos> placed = new HashSet<>();
 			for (BlockPos pos : area.positions()) {
 				if (area.wasFree(pos) && !pos.equals(program.pos())
@@ -279,6 +296,11 @@ final class Checks {
 			return world.getBlockState(pos).is(blocks.get(pos));
 		}
 
+		/** Whether all its blocks are still there. */
+		boolean untouched() {
+			return blocks.keySet().stream().allMatch(this::intact);
+		}
+
 		/** Takes away the blocks of the course that are still there. */
 		void remove() {
 			blocks.keySet().stream().filter(this::intact).forEach(pos -> world.setBlockAndUpdate(pos, Blocks.AIR.defaultBlockState()));
@@ -300,7 +322,7 @@ final class Checks {
 
 		Component text() {
 			return Component.translatableWithFallback("mine.lesson.check.no_room",
-					"Not yet: MINE needs %s free blocks in front of Byte to build the challenge. Move it to an open space with /mine byte recall.",
+					"Not yet: MINE needs %s free blocks in front of Byte to build the challenge. Go to an open space and type /mine byte recall: your Byte comes to you.",
 					needed);
 		}
 	}
@@ -336,7 +358,7 @@ final class Checks {
 
 		@Override
 		public boolean untouched() {
-			return course.blocks().keySet().stream().allMatch(course::intact);
+			return course.untouched();
 		}
 
 		@Override
@@ -353,16 +375,7 @@ final class Checks {
 	 */
 	record OverTheWall(int minDistance, int maxDistance) implements Check {
 
-		static final MapCodec<OverTheWall> CODEC = RecordCodecBuilder.<OverTheWall>mapCodec(instance -> instance.group(
-				Codec.intRange(1, 12).fieldOf("min_distance").forGetter(OverTheWall::minDistance),
-				Codec.intRange(1, 12).fieldOf("max_distance").forGetter(OverTheWall::maxDistance)
-		).apply(instance, OverTheWall::new)).validate(check -> check.minDistance() <= check.maxDistance()
-				? DataResult.success(check) : DataResult.error(() -> "min_distance is bigger than max_distance"));
-
-		@Override
-		public Object start(AgentProgram program) {
-			return prepare(program.world(), program.startPos(), program.startFacing());
-		}
+		static final MapCodec<OverTheWall> CODEC = rangeCodec("distance", 1, 12, OverTheWall::new, OverTheWall::minDistance, OverTheWall::maxDistance);
 
 		@Override
 		public Object prepare(ServerLevel world, BlockPos start, Direction ahead) {
@@ -415,7 +428,7 @@ final class Checks {
 
 			@Override
 			public boolean untouched() {
-				return course.blocks().keySet().stream().allMatch(course::intact);
+				return course.untouched();
 			}
 
 			@Override
@@ -430,11 +443,6 @@ final class Checks {
 			long stoneDug() {
 				return course.blocks().keySet().stream().filter(pos -> !gold.contains(pos) && !course.intact(pos)).count();
 			}
-		}
-
-		@Override
-		public Object start(AgentProgram program) {
-			return prepare(program.world(), program.startPos(), program.startFacing());
 		}
 
 		@Override
@@ -526,7 +534,7 @@ final class Checks {
 			}
 			if (!stock.room()) {
 				return Component.translatableWithFallback("mine.lesson.check.no_room_tower",
-						"Not yet: there's no room for a tower %s blocks tall in front of Byte. Move it to an open space with /mine byte recall.",
+						"Not yet: there's no room for a tower %s blocks tall in front of Byte. Go to an open space and type /mine byte recall: your Byte comes to you.",
 						stock.blocks());
 			}
 			int height = height(program);
@@ -562,18 +570,7 @@ final class Checks {
 	 */
 	record CountToWall(int minDistance, int maxDistance) implements Check {
 
-		static final MapCodec<CountToWall> CODEC = RecordCodecBuilder.<CountToWall>mapCodec(instance -> instance.group(
-				Codec.intRange(2, 12).fieldOf("min_distance").forGetter(CountToWall::minDistance),
-				Codec.intRange(2, 12).fieldOf("max_distance").forGetter(CountToWall::maxDistance)
-		).apply(instance, CountToWall::new)).validate(check -> check.minDistance() <= check.maxDistance()
-				? DataResult.success(check) : DataResult.error(() -> "min_distance is bigger than max_distance"));
-
-		private static final java.util.regex.Pattern NUMBER = java.util.regex.Pattern.compile("\\d+");
-
-		@Override
-		public Object start(AgentProgram program) {
-			return prepare(program.world(), program.startPos(), program.startFacing());
-		}
+		static final MapCodec<CountToWall> CODEC = rangeCodec("distance", 2, 12, CountToWall::new, CountToWall::minDistance, CountToWall::maxDistance);
 
 		@Override
 		public Object prepare(ServerLevel world, BlockPos start, Direction ahead) {
@@ -617,16 +614,6 @@ final class Checks {
 			return program.pos().equals(wall.center().relative(program.startFacing().getOpposite())) && wall.untouched();
 		}
 
-		private static List<Integer> numbersSaid(AgentProgram program) {
-			List<Integer> numbers = new ArrayList<>();
-			for (String message : program.messages()) {
-				java.util.regex.Matcher matcher = NUMBER.matcher(message);
-				while (matcher.find()) {
-					numbers.add(Integer.parseInt(matcher.group().length() > 6 ? "-1" : matcher.group()));
-				}
-			}
-			return numbers;
-		}
 	}
 
 	/**
@@ -636,11 +623,7 @@ final class Checks {
 	 */
 	record SquareOfChallenge(int minSide, int maxSide) implements Check {
 
-		static final MapCodec<SquareOfChallenge> CODEC = RecordCodecBuilder.<SquareOfChallenge>mapCodec(instance -> instance.group(
-				Codec.intRange(1, 8).fieldOf("min_side").forGetter(SquareOfChallenge::minSide),
-				Codec.intRange(1, 8).fieldOf("max_side").forGetter(SquareOfChallenge::maxSide)
-		).apply(instance, SquareOfChallenge::new)).validate(check -> check.minSide() <= check.maxSide()
-				? DataResult.success(check) : DataResult.error(() -> "min_side is bigger than max_side"));
+		static final MapCodec<SquareOfChallenge> CODEC = rangeCodec("side", 1, 8, SquareOfChallenge::new, SquareOfChallenge::minSide, SquareOfChallenge::maxSide);
 
 		/** The side MINE asked for, and the square check for that size with its memo. */
 		private record Asked(int side, Build build, Object memo) {
@@ -670,7 +653,7 @@ final class Checks {
 						"Not yet: this time mine.challenge() asked for a square %s × %s.", asked.side(), asked.side());
 			}
 			return Component.translatableWithFallback("mine.lesson.check.asked_square_built",
-					"Not yet: this time mine.challenge() asked for a square %s × %s, and your Byte built %s blocks, %s long and %s wide.",
+					"Not yet: this time MINE asked for a square %s × %s, and your Byte built %s blocks: the build is %s long and %s wide.",
 					asked.side(), asked.side(), biggest.blocks(), Math.max(biggest.sizeX(), biggest.sizeZ()),
 					Math.min(biggest.sizeX(), biggest.sizeZ()));
 		}
@@ -770,26 +753,61 @@ final class Checks {
 			Map.entry("farm", FarmChecks.Farm.CODEC),
 			Map.entry("cipher", CipherChecks.Cipher.CODEC));
 
-	/** A check in a lesson file: {@code {"type": "...", ...parameters}}. */
+	/** A check in a lesson file: {@code {"type": "...", ...parameters}}. Lesson files are only read, never written. */
 	static final Codec<Check> CODEC = Codec.STRING.partialDispatch("type",
-			check -> switch (check) {
-				case Said ignored -> DataResult.success("said");
-				case Roundtrip ignored -> DataResult.success("roundtrip");
-				case Tower ignored -> DataResult.success("tower");
-				case Build ignored -> DataResult.success("build");
-				case OverTheWall ignored -> DataResult.success("over_the_wall");
-				case GoldRow ignored -> DataResult.success("gold_row");
-				case TowerOfAll ignored -> DataResult.success("tower_of_all");
-				case CountToWall ignored -> DataResult.success("count_to_wall");
-				case SquareOfChallenge ignored -> DataResult.success("square_of_challenge");
-				case Pyramid ignored -> DataResult.success("pyramid");
-				default -> DataResult.error(() -> "Not a lesson check: " + check);
-			},
+			check -> DataResult.error(() -> "Lesson checks are only read: " + check),
 			type -> TYPES.containsKey(type)
 					? DataResult.success(TYPES.get(type))
 					: DataResult.error(() -> "Unknown check type '" + type + "', known types: " + TYPES.keySet()));
 
 	private Checks() {
+	}
+
+	/**
+	 * A check with a random number between {@code min_<name>} and {@code max_<name>} (each from
+	 * {@code low} to {@code high}, the first not bigger than the second).
+	 */
+	static <C> MapCodec<C> rangeCodec(String name, int low, int high, BiFunction<Integer, Integer, C> make,
+			Function<C, Integer> min, Function<C, Integer> max) {
+		return RecordCodecBuilder.<C>mapCodec(instance -> instance.group(
+				Codec.intRange(low, high).fieldOf("min_" + name).forGetter(min),
+				Codec.intRange(low, high).fieldOf("max_" + name).forGetter(max)
+		).apply(instance, make)).validate(check -> min.apply(check) <= max.apply(check)
+				? DataResult.success(check) : DataResult.error(() -> "min_" + name + " is bigger than max_" + name));
+	}
+
+	/** A whole number in what the Agent says: with its sign, up to 9 digits (longer ones aren't counted). */
+	private static final Pattern NUMBER = Pattern.compile("-?\\d+");
+	private static final int NUMBER_DIGITS = 9;
+
+	/** The whole numbers in a message, in order. */
+	static List<Integer> numbers(String message) {
+		List<Integer> numbers = new ArrayList<>();
+		Matcher matcher = NUMBER.matcher(message);
+		while (matcher.find()) {
+			String digits = matcher.group();
+			if (digits.length() - (digits.startsWith("-") ? 1 : 0) <= NUMBER_DIGITS) {
+				numbers.add(Integer.parseInt(digits));
+			}
+		}
+		return numbers;
+	}
+
+	/** The whole numbers in everything the Agent said, in order. */
+	static List<Integer> numbersSaid(AgentProgram program) {
+		return program.messages().stream().flatMap(message -> numbers(message).stream()).toList();
+	}
+
+	/** "on" or "off", for lamps, doors and fans in the checks' messages. */
+	static Component onOff(boolean on) {
+		return on ? Component.translatableWithFallback("mine.lesson.check.on", "on")
+				: Component.translatableWithFallback("mine.lesson.check.off", "off");
+	}
+
+	/** For live tests: the program ended before MINE could try it. */
+	static Component keepListening() {
+		return Component.translatableWithFallback("mine.lesson.check.keep_listening",
+				"Not yet: your program ended before MINE could try it. Keep it listening: while true do ... end.");
 	}
 
 	/**
@@ -802,7 +820,7 @@ final class Checks {
 		}
 		return program.otherItems() > 0
 				? Component.translatableWithFallback("mine.lesson.check.blocks_elsewhere",
-						"Not yet: the highlighted slot ran out of blocks, and byte.place() only uses that one. Put at least %s blocks, all in the highlighted slot.", needed)
+						"Not yet: the highlighted slot ran out of blocks, and Byte only builds with that one. Put at least %s blocks, all in it.", needed)
 				: Component.translatableWithFallback("mine.lesson.check.no_blocks",
 						"Not yet: Byte ran out of blocks. Put at least %s in the highlighted slot of its inventory.", needed);
 	}

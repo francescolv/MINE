@@ -30,19 +30,6 @@ public final class BoardBlockEntity extends BlockEntity {
 		super(BoardBlocks.ENTITY, pos, state);
 	}
 
-	@Nullable
-	public UUID owner() {
-		return owner;
-	}
-
-	public String key() {
-		return key;
-	}
-
-	public boolean pulse() {
-		return pulse;
-	}
-
 	/** Whose board, and which key: for teachers placing blocks with commands, and for tests. */
 	public void configure(@Nullable UUID owner, String ownerName, String key, boolean pulse) {
 		BoardBlocks.untrack(this);

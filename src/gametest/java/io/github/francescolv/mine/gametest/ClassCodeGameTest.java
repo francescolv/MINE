@@ -1,7 +1,6 @@
 package io.github.francescolv.mine.gametest;
 
 import com.mojang.authlib.GameProfile;
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import io.github.francescolv.mine.classroom.ClassCode;
 import io.github.francescolv.mine.classroom.ClassDay;
 import io.github.francescolv.mine.classroom.JoinGate;
@@ -152,36 +151,25 @@ public class ClassCodeGameTest {
 
 			// The teacher lets them in by name.
 			CommandSourceStack console = server.createCommandSourceStack();
-			execute(ctx, console, "mine class waiting", true);
-			execute(ctx, console, "mine class admit Nobody", false);
-			execute(ctx, console, "mine class admit " + visitor.name().toLowerCase(), true);
+			GameTests.execute(ctx, console, "mine class waiting", true);
+			GameTests.execute(ctx, console, "mine class admit Nobody", false);
+			GameTests.execute(ctx, console, "mine class admit " + visitor.name().toLowerCase(), true);
 			ctx.assertTrue(players.getWhiteList().isWhiteListed(new NameAndId(visitor)), "On the whitelist");
 			ctx.assertTrue(ClassCode.waiting(visitor.name()) == null, "No longer waiting");
 			ctx.assertTrue(players.canPlayerLogin(address, new NameAndId(visitor)) == null || players.isWhiteListed(new NameAndId(visitor)), "In the class");
 
-			execute(ctx, console, "mine class code", true);
+			GameTests.execute(ctx, console, "mine class code", true);
 			ctx.assertTrue(ClassCode.current() != null, "/mine class code opens one");
 			List<Integer> code = ClassCode.current();
-			execute(ctx, console, "mine class code", true);
+			GameTests.execute(ctx, console, "mine class code", true);
 			ctx.assertTrue(code.equals(ClassCode.current()), "Asked again: the same code");
-			execute(ctx, console, "mine class close", true);
-			execute(ctx, console, "mine class close", false);
+			GameTests.execute(ctx, console, "mine class close", true);
+			GameTests.execute(ctx, console, "mine class close", false);
 		} finally {
 			players.getWhiteList().remove(new UserWhiteListEntry(new NameAndId(visitor)));
 			server.setUsingWhitelist(whitelist);
 			ClassCode.close();
 		}
 		ctx.succeed();
-	}
-
-	private static void execute(GameTestHelper ctx, CommandSourceStack source, String command, boolean succeeds) {
-		int result;
-		try {
-			result = ctx.getLevel().getServer().getCommands().getDispatcher().execute(command, source);
-		} catch (CommandSyntaxException e) {
-			io.github.francescolv.mine.MineMod.LOGGER.info("[MINE test] /{} failed: {}", command, e.getMessage());
-			result = 0;
-		}
-		ctx.assertTrue((result > 0) == succeeds, "/" + command + (succeeds ? " should succeed" : " should fail"));
 	}
 }

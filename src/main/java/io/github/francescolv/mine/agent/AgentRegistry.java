@@ -1,12 +1,11 @@
 package io.github.francescolv.mine.agent;
 
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.github.francescolv.mine.DataFormat;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.UUIDUtil;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.Level;
@@ -16,6 +15,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -81,36 +81,31 @@ public final class AgentRegistry extends SavedData {
 		}
 	}
 
+	/** A student's Byte as saved. */
+	private record Saved(UUID player, ResourceKey<Level> dimension, long pos, String label, int computerId, Optional<String> lastRun) {
+		static final Codec<Saved> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+				UUIDUtil.CODEC.fieldOf("Player").forGetter(Saved::player),
+				Level.RESOURCE_KEY_CODEC.fieldOf("Dimension").forGetter(Saved::dimension),
+				Codec.LONG.fieldOf("Pos").orElse(0L).forGetter(Saved::pos),
+				Codec.STRING.fieldOf("Label").orElse("").forGetter(Saved::label),
+				Codec.INT.fieldOf("ComputerId").orElse(0).forGetter(Saved::computerId),
+				Codec.STRING.optionalFieldOf("LastRun").forGetter(Saved::lastRun)
+		).apply(instance, Saved::new));
+	}
+
 	public CompoundTag save() {
 		CompoundTag nbt = new CompoundTag();
-		ListTag list = new ListTag();
-		agents.forEach((player, entry) -> {
-			CompoundTag tag = new CompoundTag();
-			tag.store("Player", UUIDUtil.CODEC, player);
-			tag.putString("Dimension", entry.dimension().identifier().toString());
-			tag.putLong("Pos", entry.pos().asLong());
-			tag.putString("Label", entry.label());
-			tag.putInt("ComputerId", entry.computerId());
-			if (lastRun.containsKey(player)) {
-				tag.putString("LastRun", lastRun.get(player));
-			}
-			list.add(tag);
-		});
-		nbt.put("Bytes", list);
+		DataFormat.writeList(nbt, "Bytes", Saved.CODEC, agents.entrySet().stream().map(e -> new Saved(e.getKey(), e.getValue().dimension(),
+				e.getValue().pos().asLong(), e.getValue().label(), e.getValue().computerId(), Optional.ofNullable(lastRun.get(e.getKey())))).toList());
 		return nbt;
 	}
 
 	/** The registry as saved in {@code nbt}. */
 	public static AgentRegistry fromNbt(CompoundTag nbt) {
 		AgentRegistry registry = new AgentRegistry();
-		ListTag list = nbt.getListOrEmpty("Bytes");
-		for (int i = 0; i < list.size(); i++) {
-			CompoundTag tag = list.getCompoundOrEmpty(i);
-			ResourceKey<Level> dimension = ResourceKey.create(Registries.DIMENSION, Identifier.parse(tag.getStringOr("Dimension", "")));
-			UUID player = tag.read("Player", UUIDUtil.CODEC).orElseThrow();
-			registry.agents.put(player, new Entry(dimension, BlockPos.of(tag.getLongOr("Pos", 0L)),
-					tag.getStringOr("Label", ""), tag.getIntOr("ComputerId", 0)));
-			tag.getString("LastRun").ifPresent(command -> registry.lastRun.put(player, command));
+		for (Saved saved : DataFormat.readList(nbt, "Bytes", Saved.CODEC, "Byte")) {
+			registry.agents.put(saved.player(), new Entry(saved.dimension(), BlockPos.of(saved.pos()), saved.label(), saved.computerId()));
+			saved.lastRun().ifPresent(command -> registry.lastRun.put(saved.player(), command));
 		}
 		return registry;
 	}

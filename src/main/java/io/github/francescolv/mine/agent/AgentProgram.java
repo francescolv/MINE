@@ -76,10 +76,6 @@ public final class AgentProgram {
 		LISTENERS.add(listener);
 	}
 
-	public static void removeListener(Listener listener) {
-		LISTENERS.remove(listener);
-	}
-
 	void start() {
 		LISTENERS.forEach(listener -> listener.started(this));
 	}

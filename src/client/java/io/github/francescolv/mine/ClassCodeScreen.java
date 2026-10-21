@@ -35,7 +35,7 @@ final class ClassCodeScreen extends Screen {
 	private Button delete;
 	private Button join;
 	private Component message;
-	private int messageColor = 0xFFA0A0A0;
+	private int messageColor = MineScreens.GRAY;
 	private boolean waiting;
 	private boolean gaveUp;
 	@Nullable
@@ -52,8 +52,8 @@ final class ClassCodeScreen extends Screen {
 	void wrong(int triesLeft) {
 		typed.clear();
 		waiting = false;
-		message = Component.translatableWithFallback("mine.class.screen.wrong", "That's not the code: try again (%s tries left).", triesLeft);
-		messageColor = 0xFFFF5555;
+		message = Component.translatableWithFallback("mine.class.screen.wrong", "That's not the code: try again (tries left: %s).", triesLeft);
+		messageColor = MineScreens.RED;
 		update();
 		minecraft.getNarrator().saySystemNow(message);
 	}
@@ -100,7 +100,7 @@ final class ClassCodeScreen extends Screen {
 			typed.add(symbol);
 			message = Component.translatableWithFallback("mine.class.screen.help",
 					"You're not in this class yet: click the symbols your teacher shows you, in order.");
-			messageColor = 0xFFA0A0A0;
+			messageColor = MineScreens.GRAY;
 		}
 		update();
 	}
@@ -108,7 +108,7 @@ final class ClassCodeScreen extends Screen {
 	private void send() {
 		waiting = true;
 		message = Component.translatableWithFallback("mine.class.screen.checking", "Checking the code...");
-		messageColor = 0xFFA0A0A0;
+		messageColor = MineScreens.GRAY;
 		ClientConfigurationNetworking.send(new ClassCodePayloads.Answer(List.copyOf(typed)));
 		update();
 	}
@@ -150,14 +150,14 @@ final class ClassCodeScreen extends Screen {
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
 		super.extractRenderState(context, mouseX, mouseY, delta);
-		context.centeredText(font, title, width / 2, slotsTop() - 34, 0xFFFFFFFF);
+		context.centeredText(font, title, width / 2, slotsTop() - 34, MineScreens.WHITE);
 		context.centeredText(font, message, width / 2, slotsTop() - 18, messageColor);
 		// The code typed so far: four boxes.
 		int left = width / 2 - ClassCode.LENGTH * CELL / 2;
 		for (int i = 0; i < ClassCode.LENGTH; i++) {
 			int x = left + i * CELL;
 			context.fill(x, slotsTop(), x + CELL - 2, slotsTop() + CELL - 2, 0xFF000000);
-			context.outline(x, slotsTop(), CELL - 2, CELL - 2, i == typed.size() ? 0xFFFFFFFF : 0xFF808080);
+			context.outline(x, slotsTop(), CELL - 2, CELL - 2, i == typed.size() ? MineScreens.WHITE : MineScreens.DARK_GRAY);
 			if (i < typed.size()) {
 				drawSymbol(context, typed.get(i), x + 1, slotsTop() + 1, 2);
 			}

@@ -71,7 +71,8 @@ public final class AgentCommand {
 		}
 	}
 
-	private static Component message(AgentManager.Result result) {
+	/** What the student is told about a result of the Byte's commands (also when the block editor runs a program). */
+	public static Component message(AgentManager.Result result) {
 		return switch (result) {
 			case SPAWNED -> Component.translatableWithFallback("mine.agent.spawned",
 					"Here is your Byte! Right-click it to program it.");

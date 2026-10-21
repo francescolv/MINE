@@ -1,6 +1,5 @@
 package io.github.francescolv.mine.gametest;
 
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import dan200.computercraft.shared.computer.core.ServerComputer;
 import dan200.computercraft.shared.computer.core.ServerContext;
 import dan200.computercraft.shared.turtle.blocks.TurtleBlockEntity;
@@ -222,20 +221,20 @@ public class MissionGameTest {
 		CommandSourceStack asTeacher = s.player().createCommandSourceStack().withPermission(LevelBasedPermissionSet.GAMEMASTER);
 		LessonProgress progress = LessonProgress.get(ctx.getLevel().getServer());
 
-		execute(ctx, asStudent, "mine lesson start first_steps", true);
-		execute(ctx, asStudent, "mine lesson answer Too early", false);
+		GameTests.execute(ctx, asStudent, "mine lesson start first_steps", true);
+		GameTests.execute(ctx, asStudent, "mine lesson answer Too early", false);
 		progress.put(s.uuid(), new LessonProgress.Entry("first_steps", 3, 0, 1, 2));
-		execute(ctx, asStudent, "mine lesson answer Because I can run it again", true);
-		execute(ctx, asStudent, "mine lesson answer Because I can run it again, without typing it", true);
+		GameTests.execute(ctx, asStudent, "mine lesson answer Because I can run it again", true);
+		GameTests.execute(ctx, asStudent, "mine lesson answer Because I can run it again, without typing it", true);
 		ctx.assertTrue("Because I can run it again, without typing it".equals(progress.answer(s.uuid(), "first_steps").text()),
 				"The latest answer should be kept: " + progress.answer(s.uuid(), "first_steps"));
 
-		execute(ctx, asStudent, "mine lesson answers first_steps", false);
-		execute(ctx, asTeacher, "mine lesson answers first_steps", true);
-		execute(ctx, asTeacher, "mine lesson answers loops", false);
+		GameTests.execute(ctx, asStudent, "mine lesson answers first_steps", false);
+		GameTests.execute(ctx, asTeacher, "mine lesson answers first_steps", true);
+		GameTests.execute(ctx, asTeacher, "mine lesson answers loops", false);
 
-		execute(ctx, asStudent, "mine lesson start loops", true);
-		execute(ctx, asTeacher, "mine lesson reset @s", true);
+		GameTests.execute(ctx, asStudent, "mine lesson start loops", true);
+		GameTests.execute(ctx, asTeacher, "mine lesson reset @s", true);
 		var registries = ctx.getLevel().registryAccess();
 		LessonProgress loaded = LessonProgress.fromNbt(progress.save());
 		// The test world is kept between runs: other students' answers may be there too.
@@ -1289,34 +1288,24 @@ public class MissionGameTest {
 		CommandSourceStack asTeacher = s.player().createCommandSourceStack().withPermission(LevelBasedPermissionSet.GAMEMASTER);
 		LessonProgress progress = LessonProgress.get(ctx.getLevel().getServer());
 
-		execute(ctx, asStudent, "mine lesson hint", false);
-		execute(ctx, asStudent, "mine lesson start first_steps", true);
+		GameTests.execute(ctx, asStudent, "mine lesson hint", false);
+		GameTests.execute(ctx, asStudent, "mine lesson start first_steps", true);
 		expectStep(ctx, s, 0);
 
-		execute(ctx, asStudent, "mine lesson hint", true);
-		execute(ctx, asStudent, "mine lesson hint", true);
-		execute(ctx, asStudent, "mine lesson hint", false);
+		GameTests.execute(ctx, asStudent, "mine lesson hint", true);
+		GameTests.execute(ctx, asStudent, "mine lesson hint", true);
+		GameTests.execute(ctx, asStudent, "mine lesson hint", false);
 		ctx.assertTrue(progress.get(s.uuid()).hints() == 2, "Two hints should have been shown");
 
 		progress.put(s.uuid(), new LessonProgress.Entry("first_steps", 1, 0, 1, 0));
-		execute(ctx, asStudent, "mine lesson restart", true);
+		GameTests.execute(ctx, asStudent, "mine lesson restart", true);
 		expectStep(ctx, s, 0);
 
-		execute(ctx, asStudent, "mine lesson reset @s", false);
+		GameTests.execute(ctx, asStudent, "mine lesson reset @s", false);
 		expectStep(ctx, s, 0);
-		execute(ctx, asTeacher, "mine lesson reset @s", true);
+		GameTests.execute(ctx, asTeacher, "mine lesson reset @s", true);
 		expectStatus(ctx, s, LessonProgress.Status.NOT_STARTED);
-		execute(ctx, asStudent, "mine lesson start nonexistent", false);
+		GameTests.execute(ctx, asStudent, "mine lesson start nonexistent", false);
 		ctx.succeed();
-	}
-
-	private static void execute(GameTestHelper ctx, CommandSourceStack source, String command, boolean succeeds) {
-		int result;
-		try {
-			result = ctx.getLevel().getServer().getCommands().getDispatcher().execute(command, source);
-		} catch (CommandSyntaxException e) {
-			result = 0;
-		}
-		ctx.assertTrue((result > 0) == succeeds, "/" + command + (succeeds ? " should succeed" : " should fail"));
 	}
 }

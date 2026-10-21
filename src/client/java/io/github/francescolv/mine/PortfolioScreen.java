@@ -257,7 +257,7 @@ final class PortfolioScreen extends Screen {
 				? Component.translatableWithFallback("mine.portfolio.ui.gallery_title", "Class gallery: %s", view.title())
 				: Component.translatableWithFallback("mine.portfolio.ui.title", "Portfolio of %s", view.title());
 		String counter = view.entries().isEmpty() ? "" : "  " + (index + 1) + "/" + view.entries().size();
-		context.centeredText(font, heading.copy().append(counter), width / 2, 8, 0xFFFFFFFF);
+		context.centeredText(font, heading.copy().append(counter), width / 2, 8, MineScreens.WHITE);
 		if (mode == Mode.NOTE) {
 			return;
 		}
@@ -290,7 +290,7 @@ final class PortfolioScreen extends Screen {
 			}
 			int y = areaBottom;
 			for (FormattedCharSequence line : font.split(Component.literal(entry.text()), areaWidth).stream().limit(2).toList()) {
-				context.centeredText(font, line, width / 2, y, 0xFFFFFFFF);
+				context.centeredText(font, line, width / 2, y, MineScreens.WHITE);
 				y += 10;
 			}
 		} else {

@@ -14,7 +14,7 @@ import java.util.UUID;
 
 /**
  * Teachers write NPCs and boards in MINE's window: one click, no book and quill to fetch, open in
- * the air and give back. A game without MINE keeps the book.
+ * the air and give back. The book and quill works too.
  */
 public final class Writing {
 

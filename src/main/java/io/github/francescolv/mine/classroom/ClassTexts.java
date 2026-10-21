@@ -19,12 +19,6 @@ final class ClassTexts {
 				"You're not in this class yet.\n\nAsk your teacher for the class code, or to let you in.");
 	}
 
-	/** For a student who isn't in the class and whose game has no MINE to type the code. */
-	static Component noMine() {
-		return Component.translatableWithFallback("mine.class.no_mine",
-				"You're not in this class yet.\n\nYour Minecraft doesn't have MINE, to type the class code: ask your teacher to let you in.");
-	}
-
 	static Component tooMany() {
 		return Component.translatableWithFallback("mine.class.too_many",
 				"Too many wrong codes. Ask your teacher to let you in.");

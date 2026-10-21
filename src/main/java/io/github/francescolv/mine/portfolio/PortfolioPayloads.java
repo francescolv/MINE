@@ -1,12 +1,11 @@
 package io.github.francescolv.mine.portfolio;
 
-import io.github.francescolv.mine.MineMod;
+import io.github.francescolv.mine.MinePayloads;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.Identifier;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,7 +36,7 @@ public final class PortfolioPayloads {
 	/** A piece ({@code index} of {@code total}) of photo number {@code upload}, a JPEG. */
 	public record Upload(int upload, int index, int total, byte[] data) implements CustomPacketPayload {
 
-		public static final Type<Upload> ID = new Type<>(Identifier.fromNamespaceAndPath(MineMod.MOD_ID, "photo_upload"));
+		public static final Type<Upload> ID = MinePayloads.type("photo_upload");
 		public static final StreamCodec<RegistryFriendlyByteBuf, Upload> CODEC = StreamCodec.composite(
 				ByteBufCodecs.VAR_INT, Upload::upload,
 				ByteBufCodecs.VAR_INT, Upload::index,
@@ -67,9 +66,9 @@ public final class PortfolioPayloads {
 
 	public record Request(Action action, String album, String entry, String text) implements CustomPacketPayload {
 
-		public static final Type<Request> ID = new Type<>(Identifier.fromNamespaceAndPath(MineMod.MOD_ID, "portfolio_request"));
+		public static final Type<Request> ID = MinePayloads.type("portfolio_request");
 		public static final StreamCodec<RegistryFriendlyByteBuf, Request> CODEC = StreamCodec.composite(
-				ByteBufCodecs.VAR_INT.map(i -> Action.values()[Math.floorMod(i, Action.values().length)], Action::ordinal), Request::action,
+				MinePayloads.enumCodec(Action.class), Request::action,
 				ByteBufCodecs.stringUtf8(64), Request::album,
 				ByteBufCodecs.stringUtf8(64), Request::entry,
 				ByteBufCodecs.stringUtf8(MAX_NOTE), Request::text,
@@ -115,7 +114,7 @@ public final class PortfolioPayloads {
 	public record View(String album, String title, boolean gallery, boolean canNote, String shareTo, String select,
 			List<EntryView> entries) implements CustomPacketPayload {
 
-		public static final Type<View> ID = new Type<>(Identifier.fromNamespaceAndPath(MineMod.MOD_ID, "portfolio_view"));
+		public static final Type<View> ID = MinePayloads.type("portfolio_view");
 		public static final StreamCodec<RegistryFriendlyByteBuf, View> CODEC = StreamCodec.ofMember(View::write, View::read);
 
 		private void write(RegistryFriendlyByteBuf buf) {
@@ -153,7 +152,7 @@ public final class PortfolioPayloads {
 	/** The photo (a JPEG) of an entry, for the window to show. */
 	public record Photo(String album, String entry, byte[] data) implements CustomPacketPayload {
 
-		public static final Type<Photo> ID = new Type<>(Identifier.fromNamespaceAndPath(MineMod.MOD_ID, "photo"));
+		public static final Type<Photo> ID = MinePayloads.type("photo");
 		public static final StreamCodec<RegistryFriendlyByteBuf, Photo> CODEC = StreamCodec.composite(
 				ByteBufCodecs.stringUtf8(64), Photo::album,
 				ByteBufCodecs.stringUtf8(64), Photo::entry,

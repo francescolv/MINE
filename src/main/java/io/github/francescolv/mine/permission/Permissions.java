@@ -1,10 +1,11 @@
 package io.github.francescolv.mine.permission;
 
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.github.francescolv.mine.DataFormat;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permission;
@@ -105,26 +106,23 @@ public final class Permissions extends SavedData {
 		return builders.values().stream().sorted(String.CASE_INSENSITIVE_ORDER).toList();
 	}
 
+	/** A builder as saved. */
+	private record Saved(UUID player, String name) {
+		static final Codec<Saved> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+				UUIDUtil.CODEC.fieldOf("Player").forGetter(Saved::player),
+				Codec.STRING.fieldOf("Name").orElse("").forGetter(Saved::name)
+		).apply(instance, Saved::new));
+	}
+
 	public CompoundTag save() {
 		CompoundTag nbt = new CompoundTag();
-		ListTag list = new ListTag();
-		builders.forEach((uuid, name) -> {
-			CompoundTag tag = new CompoundTag();
-			tag.store("Player", UUIDUtil.CODEC, uuid);
-			tag.putString("Name", name);
-			list.add(tag);
-		});
-		nbt.put("Builders", list);
+		DataFormat.writeList(nbt, "Builders", Saved.CODEC, builders.entrySet().stream().map(e -> new Saved(e.getKey(), e.getValue())).toList());
 		return nbt;
 	}
 
 	public static Permissions fromNbt(CompoundTag nbt) {
 		Permissions permissions = new Permissions();
-		ListTag list = nbt.getListOrEmpty("Builders");
-		for (int i = 0; i < list.size(); i++) {
-			CompoundTag tag = list.getCompoundOrEmpty(i);
-			permissions.builders.put(tag.read("Player", UUIDUtil.CODEC).orElseThrow(), tag.getStringOr("Name", ""));
-		}
+		DataFormat.readList(nbt, "Builders", Saved.CODEC, "builder").forEach(saved -> permissions.builders.put(saved.player(), saved.name()));
 		return permissions;
 	}
 }

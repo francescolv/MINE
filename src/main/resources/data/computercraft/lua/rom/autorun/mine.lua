@@ -154,24 +154,31 @@ topShell.run = function(...)
     return result or stopped
 end
 
--- What MINE prepares on the Agent when the shell is ready: the pickaxe, items for the lesson
--- (given by the server) and programs to copy. Programs are copied once per token: when the
--- server sends a new one (the lesson was restarted), they are copied again, overwriting the
--- old ones. Returns the lines to show, or nil if there is no news.
+-- The token of the lesson programs last copied.
 local MARKER = "/.mine_lesson"
+
+-- Writes each program of t (name -> content) on the disk, over the old one.
+local function writeFiles(t)
+    for name, content in pairs(t or {}) do
+        local handle = fs.open("/" .. name, "w")
+        handle.write(content)
+        handle.close()
+    end
+end
 
 -- Programs sent from MINE's block editor: written every time, over the old ones. Returns the
 -- lines announcing them.
 local function receiveSent()
     local sent, sentLines = mine._inbox()
-    for name, content in pairs(sent or {}) do
-        local handle = fs.open("/" .. name, "w")
-        handle.write(content)
-        handle.close()
-    end
+    writeFiles(sent)
     return sentLines
 end
 
+-- What MINE prepares on the Agent when the shell is ready: the pickaxe, items for the lesson
+-- (given by the server), programs to copy and programs sent from the block editor. Lesson
+-- programs are copied once per token: when the server sends a new one (the lesson was
+-- restarted), they are copied again, overwriting the old ones. Returns the lines to show, or
+-- nil if there is no news.
 local function receiveKit()
     local token, files, filesLines, lines = mine._prepare()
     local news = {}
@@ -182,11 +189,7 @@ local function receiveKit()
             handle.close()
         end
         if last ~= token then
-            for name, content in pairs(files) do
-                handle = fs.open("/" .. name, "w")
-                handle.write(content)
-                handle.close()
-            end
+            writeFiles(files)
             handle = fs.open(MARKER, "w")
             handle.write(token)
             handle.close()

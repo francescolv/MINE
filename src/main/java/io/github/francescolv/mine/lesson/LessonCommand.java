@@ -100,7 +100,7 @@ public final class LessonCommand {
 		ServerPlayer student = source.getPlayerOrException();
 		source.sendSuccess(() -> statusLine(student), false);
 		LessonProgress.Entry entry = LessonProgress.get(source.getServer()).get(student.getUUID());
-		Lesson lesson = LessonManager.current(source.getServer(), student.getUUID());
+		Lesson lesson = LessonManager.current(entry);
 		if (lesson != null && entry.status() == LessonProgress.Status.IN_PROGRESS) {
 			LessonFeedback.goal(student, lesson, entry.step());
 		}
@@ -128,7 +128,7 @@ public final class LessonCommand {
 	/** One line per student, e.g. "Alex — First steps with Byte: step 2 of 3". */
 	private static Component statusLine(ServerPlayer student) {
 		LessonProgress.Entry entry = LessonProgress.get(student.level().getServer()).get(student.getUUID());
-		Lesson lesson = LessonManager.current(student.level().getServer(), student.getUUID());
+		Lesson lesson = LessonManager.current(entry);
 		Component name = student.getDisplayName();
 		if (lesson == null) {
 			return Component.translatableWithFallback("mine.lesson.status_none", "%s: no lesson started", name)

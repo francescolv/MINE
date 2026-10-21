@@ -1,9 +1,10 @@
 package io.github.francescolv.mine.npc;
 
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.github.francescolv.mine.DataFormat;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
@@ -126,52 +127,54 @@ public final class QuizResults extends SavedData {
 		return before - questions.size();
 	}
 
+	/** A student's answer as saved. */
+	private record SavedAnswer(UUID player, String name, int option, String text, boolean right, int tries, boolean solved, long time) {
+		static final Codec<SavedAnswer> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+				UUIDUtil.CODEC.fieldOf("Player").forGetter(SavedAnswer::player),
+				Codec.STRING.fieldOf("Name").orElse("").forGetter(SavedAnswer::name),
+				Codec.INT.fieldOf("Option").orElse(0).forGetter(SavedAnswer::option),
+				Codec.STRING.fieldOf("Text").orElse("").forGetter(SavedAnswer::text),
+				Codec.BOOL.fieldOf("Right").orElse(false).forGetter(SavedAnswer::right),
+				Codec.INT.fieldOf("Tries").orElse(0).forGetter(SavedAnswer::tries),
+				Codec.BOOL.fieldOf("Solved").orElse(false).forGetter(SavedAnswer::solved),
+				Codec.LONG.fieldOf("Time").orElse(0L).forGetter(SavedAnswer::time)
+		).apply(instance, SavedAnswer::new));
+	}
+
+	/** A question as saved, with its answers. */
+	private record SavedQuestion(UUID npc, String npcName, int page, int index, String text, boolean poll, List<SavedAnswer> answers) {
+		static final Codec<SavedQuestion> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+				UUIDUtil.CODEC.fieldOf("Npc").forGetter(SavedQuestion::npc),
+				Codec.STRING.fieldOf("NpcName").orElse("").forGetter(SavedQuestion::npcName),
+				Codec.INT.fieldOf("Page").orElse(0).forGetter(SavedQuestion::page),
+				Codec.INT.fieldOf("Index").orElse(0).forGetter(SavedQuestion::index),
+				Codec.STRING.fieldOf("Question").orElse("").forGetter(SavedQuestion::text),
+				Codec.BOOL.fieldOf("Poll").orElse(false).forGetter(SavedQuestion::poll),
+				DataFormat.lenientList(SavedAnswer.CODEC, "quiz answer").fieldOf("Answers").orElse(List.of()).forGetter(SavedQuestion::answers)
+		).apply(instance, SavedQuestion::new));
+	}
+
 	public CompoundTag save() {
 		CompoundTag nbt = new CompoundTag();
-		ListTag list = new ListTag();
-		for (Question question : questions.values()) {
-			CompoundTag tag = new CompoundTag();
-			tag.store("Npc", UUIDUtil.CODEC, question.npc());
-			tag.putString("NpcName", question.npcName());
-			tag.putInt("Page", question.page());
-			tag.putInt("Index", question.index());
-			tag.putString("Question", question.text());
-			tag.putBoolean("Poll", question.poll());
-			ListTag answers = new ListTag();
-			question.answers().forEach((student, answer) -> {
-				CompoundTag entry = new CompoundTag();
-				entry.store("Player", UUIDUtil.CODEC, student);
-				entry.putString("Name", answer.name());
-				entry.putInt("Option", answer.option());
-				entry.putString("Text", answer.text());
-				entry.putBoolean("Right", answer.right());
-				entry.putInt("Tries", answer.tries());
-				entry.putBoolean("Solved", answer.solved());
-				entry.putLong("Time", answer.time());
-				answers.add(entry);
-			});
-			tag.put("Answers", answers);
-			list.add(tag);
-		}
-		nbt.put("Questions", list);
+		DataFormat.writeList(nbt, "Questions", SavedQuestion.CODEC, questions.values().stream().map(question -> new SavedQuestion(
+				question.npc(), question.npcName(), question.page(), question.index(), question.text(), question.poll(),
+				question.answers().entrySet().stream().map(e -> {
+					Answer answer = e.getValue();
+					return new SavedAnswer(e.getKey(), answer.name(), answer.option(), answer.text(), answer.right(), answer.tries(),
+							answer.solved(), answer.time());
+				}).toList())).toList());
 		return nbt;
 	}
 
 	public static QuizResults fromNbt(CompoundTag nbt) {
 		QuizResults results = new QuizResults();
-		ListTag list = nbt.getListOrEmpty("Questions");
-		for (int i = 0; i < list.size(); i++) {
-			CompoundTag tag = list.getCompoundOrEmpty(i);
+		for (SavedQuestion saved : DataFormat.readList(nbt, "Questions", SavedQuestion.CODEC, "quiz question")) {
 			Map<UUID, Answer> answers = new HashMap<>();
-			ListTag answerList = tag.getListOrEmpty("Answers");
-			for (int j = 0; j < answerList.size(); j++) {
-				CompoundTag entry = answerList.getCompoundOrEmpty(j);
-				answers.put(entry.read("Player", UUIDUtil.CODEC).orElseThrow(), new Answer(entry.getStringOr("Name", ""), entry.getIntOr("Option", 0),
-						entry.getStringOr("Text", ""), entry.getBooleanOr("Right", false), entry.getIntOr("Tries", 0),
-						entry.getBooleanOr("Solved", false), entry.getLongOr("Time", 0L)));
+			for (SavedAnswer answer : saved.answers()) {
+				answers.put(answer.player(), new Answer(answer.name(), answer.option(), answer.text(), answer.right(), answer.tries(),
+						answer.solved(), answer.time()));
 			}
-			Question question = new Question(tag.read("Npc", UUIDUtil.CODEC).orElseThrow(), tag.getStringOr("NpcName", ""), tag.getIntOr("Page", 0),
-					tag.getIntOr("Index", 0), tag.getStringOr("Question", ""), tag.getBooleanOr("Poll", false), answers);
+			Question question = new Question(saved.npc(), saved.npcName(), saved.page(), saved.index(), saved.text(), saved.poll(), answers);
 			results.questions.put(key(question.npc(), question.text()), question);
 		}
 		return results;

@@ -13,11 +13,12 @@ public interface Check {
 
 	/**
 	 * Called when the program starts, before its first instruction: returns whatever {@link #passed}
-	 * needs to remember. May also prepare the world, e.g. build a challenge in front of the Agent.
+	 * needs to remember. May also prepare the world, e.g. build a challenge in front of the Agent:
+	 * by default, {@link #prepare} where the program starts.
 	 */
 	@Nullable
 	default Object start(AgentProgram program) {
-		return null;
+		return prepare(program.world(), program.startPos(), program.startFacing());
 	}
 
 	/**

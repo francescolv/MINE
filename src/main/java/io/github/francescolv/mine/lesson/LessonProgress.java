@@ -1,9 +1,10 @@
 package io.github.francescolv.mine.lesson;
 
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.github.francescolv.mine.DataFormat;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
@@ -101,16 +102,9 @@ public final class LessonProgress extends SavedData {
 		}
 	}
 
-	/**
-	 * Whether the student has ever completed the lesson. Worlds from before this was kept count
-	 * the current lesson if completed, and the lessons whose reflection they answered (only
-	 * possible at the end).
-	 */
+	/** Whether the student has ever completed the lesson. */
 	public boolean hasCompleted(UUID student, String lesson) {
-		Entry entry = students.get(student);
-		return completed.getOrDefault(student, Set.of()).contains(lesson)
-				|| (entry != null && entry.lesson().equals(lesson) && entry.status() == Status.COMPLETED)
-				|| answer(student, lesson) != null;
+		return completed.getOrDefault(student, Set.of()).contains(lesson);
 	}
 
 	public void remove(UUID student) {
@@ -144,64 +138,63 @@ public final class LessonProgress extends SavedData {
 				.toList();
 	}
 
+	/** A student's progress as saved. */
+	private record SavedEntry(UUID player, String lesson, int step, int hints, long startedAt, long completedAt, int given) {
+		static final Codec<SavedEntry> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+				UUIDUtil.CODEC.fieldOf("Player").forGetter(SavedEntry::player),
+				Codec.STRING.fieldOf("Lesson").orElse("").forGetter(SavedEntry::lesson),
+				Codec.INT.fieldOf("Step").orElse(0).forGetter(SavedEntry::step),
+				Codec.INT.fieldOf("Hints").orElse(0).forGetter(SavedEntry::hints),
+				Codec.LONG.fieldOf("StartedAt").orElse(0L).forGetter(SavedEntry::startedAt),
+				Codec.LONG.fieldOf("CompletedAt").orElse(0L).forGetter(SavedEntry::completedAt),
+				Codec.INT.fieldOf("Given").orElse(-1).forGetter(SavedEntry::given)
+		).apply(instance, SavedEntry::new));
+	}
+
+	/** A reflection answer as saved. */
+	private record SavedAnswer(UUID player, String lesson, String name, String text, long time) {
+		static final Codec<SavedAnswer> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+				UUIDUtil.CODEC.fieldOf("Player").forGetter(SavedAnswer::player),
+				Codec.STRING.fieldOf("Lesson").orElse("").forGetter(SavedAnswer::lesson),
+				Codec.STRING.fieldOf("Name").orElse("").forGetter(SavedAnswer::name),
+				Codec.STRING.fieldOf("Text").orElse("").forGetter(SavedAnswer::text),
+				Codec.LONG.fieldOf("Time").orElse(0L).forGetter(SavedAnswer::time)
+		).apply(instance, SavedAnswer::new));
+	}
+
+	/** A lesson a student completed, as saved. */
+	private record SavedCompleted(UUID player, String lesson) {
+		static final Codec<SavedCompleted> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+				UUIDUtil.CODEC.fieldOf("Player").forGetter(SavedCompleted::player),
+				Codec.STRING.fieldOf("Lesson").orElse("").forGetter(SavedCompleted::lesson)
+		).apply(instance, SavedCompleted::new));
+	}
+
 	public CompoundTag save() {
 		CompoundTag nbt = new CompoundTag();
-		ListTag list = new ListTag();
-		students.forEach((student, entry) -> {
-			CompoundTag tag = new CompoundTag();
-			tag.store("Player", UUIDUtil.CODEC, student);
-			tag.putString("Lesson", entry.lesson());
-			tag.putInt("Step", entry.step());
-			tag.putInt("Hints", entry.hints());
-			tag.putLong("StartedAt", entry.startedAt());
-			tag.putLong("CompletedAt", entry.completedAt());
-			tag.putInt("Given", entry.given());
-			list.add(tag);
-		});
-		nbt.put("Students", list);
-
-		ListTag answerList = new ListTag();
-		answers.forEach((student, byLesson) -> byLesson.forEach((lesson, answer) -> {
-			CompoundTag tag = new CompoundTag();
-			tag.store("Player", UUIDUtil.CODEC, student);
-			tag.putString("Lesson", lesson);
-			tag.putString("Name", answer.name());
-			tag.putString("Text", answer.text());
-			tag.putLong("Time", answer.time());
-			answerList.add(tag);
-		}));
-		nbt.put("Answers", answerList);
-
-		ListTag completedList = new ListTag();
-		completed.forEach((student, lessons) -> lessons.forEach(lesson -> {
-			CompoundTag tag = new CompoundTag();
-			tag.store("Player", UUIDUtil.CODEC, student);
-			tag.putString("Lesson", lesson);
-			completedList.add(tag);
-		}));
-		nbt.put("Completed", completedList);
+		DataFormat.writeList(nbt, "Students", SavedEntry.CODEC, students.entrySet().stream().map(e -> {
+			Entry entry = e.getValue();
+			return new SavedEntry(e.getKey(), entry.lesson(), entry.step(), entry.hints(), entry.startedAt(), entry.completedAt(), entry.given());
+		}).toList());
+		DataFormat.writeList(nbt, "Answers", SavedAnswer.CODEC, answers.entrySet().stream().flatMap(e -> e.getValue().entrySet().stream()
+				.map(a -> new SavedAnswer(e.getKey(), a.getKey(), a.getValue().name(), a.getValue().text(), a.getValue().time()))).toList());
+		DataFormat.writeList(nbt, "Completed", SavedCompleted.CODEC, completed.entrySet().stream().flatMap(e -> e.getValue().stream()
+				.map(lesson -> new SavedCompleted(e.getKey(), lesson))).toList());
 		return nbt;
 	}
 
 	public static LessonProgress fromNbt(CompoundTag nbt) {
 		LessonProgress progress = new LessonProgress();
-		ListTag list = nbt.getListOrEmpty("Students");
-		for (int i = 0; i < list.size(); i++) {
-			CompoundTag tag = list.getCompoundOrEmpty(i);
-			progress.students.put(tag.read("Player", UUIDUtil.CODEC).orElseThrow(), new Entry(tag.getStringOr("Lesson", ""), tag.getIntOr("Step", 0),
-					tag.getIntOr("Hints", 0), tag.getLongOr("StartedAt", 0L), tag.getLongOr("CompletedAt", 0L),
-					tag.contains("Given") ? tag.getIntOr("Given", 0) : -1));
+		for (SavedEntry saved : DataFormat.readList(nbt, "Students", SavedEntry.CODEC, "student's progress")) {
+			progress.students.put(saved.player(), new Entry(saved.lesson(), saved.step(), saved.hints(), saved.startedAt(),
+					saved.completedAt(), saved.given()));
 		}
-		ListTag answerList = nbt.getListOrEmpty("Answers");
-		for (int i = 0; i < answerList.size(); i++) {
-			CompoundTag tag = answerList.getCompoundOrEmpty(i);
-			progress.answers.computeIfAbsent(tag.read("Player", UUIDUtil.CODEC).orElseThrow(), uuid -> new HashMap<>()).put(tag.getStringOr("Lesson", ""),
-					new Answer(tag.getStringOr("Name", ""), tag.getStringOr("Text", ""), tag.getLongOr("Time", 0L)));
+		for (SavedAnswer saved : DataFormat.readList(nbt, "Answers", SavedAnswer.CODEC, "reflection answer")) {
+			progress.answers.computeIfAbsent(saved.player(), uuid -> new HashMap<>()).put(saved.lesson(),
+					new Answer(saved.name(), saved.text(), saved.time()));
 		}
-		ListTag completedList = nbt.getListOrEmpty("Completed");
-		for (int i = 0; i < completedList.size(); i++) {
-			CompoundTag tag = completedList.getCompoundOrEmpty(i);
-			progress.completed.computeIfAbsent(tag.read("Player", UUIDUtil.CODEC).orElseThrow(), uuid -> new HashSet<>()).add(tag.getStringOr("Lesson", ""));
+		for (SavedCompleted saved : DataFormat.readList(nbt, "Completed", SavedCompleted.CODEC, "completed lesson")) {
+			progress.completed.computeIfAbsent(saved.player(), uuid -> new HashSet<>()).add(saved.lesson());
 		}
 		return progress;
 	}

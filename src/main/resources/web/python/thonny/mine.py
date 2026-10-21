@@ -106,6 +106,9 @@ def _call(name, args):
     return tuple(values)
 
 
+# --- The same in web/python/mine.py and web/python/thonny/mine.py (tools/check-mine-py.js checks it) ---
+
+
 class _Api:
     def __init__(self, prefix):
         self._prefix = prefix
@@ -115,7 +118,7 @@ class _Api:
             raise AttributeError(name)
 
         def function(*args):
-            return _call(self._prefix + name, args)
+            return _call(self._prefix + name, list(args))
 
         return function
 
@@ -149,6 +152,9 @@ def _pull_event(*filter):
     # Always a tuple, as in Lua: event[0] is the event's name, also for ("redstone",).
     event = _call("os.pullEvent", list(filter))
     return event if isinstance(event, tuple) else (event,)
+
+
+# --- End of the part they share ---
 
 
 def _start():

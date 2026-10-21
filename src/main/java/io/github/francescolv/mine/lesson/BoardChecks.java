@@ -14,7 +14,6 @@ import net.minecraft.world.level.block.LeverBlock;
 import net.minecraft.world.level.block.RedstoneLampBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.AttachFace;
-import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.LinkedHashMap;
@@ -66,11 +65,7 @@ final class BoardChecks {
 			Map<BlockPos, BlockState> blocks = new LinkedHashMap<>();
 			switch (part) {
 				case DOOR -> {
-					BlockPos door = agent.relative(ahead);
-					blocks.put(door, Blocks.IRON_DOOR.defaultBlockState().setValue(DoorBlock.FACING, ahead)
-							.setValue(DoorBlock.HALF, DoubleBlockHalf.LOWER));
-					blocks.put(door.above(), Blocks.IRON_DOOR.defaultBlockState().setValue(DoorBlock.FACING, ahead)
-							.setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER));
+					Scenes.ironDoor(blocks, agent.relative(ahead), ahead);
 				}
 				case LAMP -> blocks.put(agent.relative(ahead.getOpposite()), Blocks.REDSTONE_LAMP.defaultBlockState());
 				case HEART -> blocks.put(agent.relative(ahead.getCounterClockWise()), Blocks.LEVER.defaultBlockState()
@@ -98,22 +93,10 @@ final class BoardChecks {
 					}
 				}
 			}
-			for (BlockPos pos : grounded) {
-				if (!world.getBlockState(pos.below()).isFaceSturdy(world, pos.below(), Direction.UP)) {
-					return new NoRoom();
-				}
+			if (!Scenes.fits(world, blocks, grounded)) {
+				return new NoRoom();
 			}
-			for (Map.Entry<BlockPos, BlockState> block : blocks.entrySet()) {
-				BlockState there = world.getBlockState(block.getKey());
-				if (!there.is(block.getValue().getBlock()) && !there.canBeReplaced()) {
-					return new NoRoom();
-				}
-			}
-			blocks.forEach((pos, state) -> {
-				if (!world.getBlockState(pos).is(state.getBlock())) {
-					world.setBlock(pos, state, Block.UPDATE_ALL);
-				}
-			});
+			Scenes.place(world, blocks);
 			// A door or a lamp only follows redstone when it changes: one built next to a signal
 			// already on (Byte's, left by its last program) starts open or lit, as it would be.
 			BlockPos door = agent.relative(ahead);
@@ -148,13 +131,11 @@ final class BoardChecks {
 		}
 
 		boolean open() {
-			BlockState door = world.getBlockState(door());
-			return door.is(Blocks.IRON_DOOR) && door.getValue(DoorBlock.OPEN);
+			return Scenes.open(world, door());
 		}
 
 		boolean lit() {
-			BlockState lamp = world.getBlockState(lamp());
-			return lamp.is(Blocks.REDSTONE_LAMP) && lamp.getValue(RedstoneLampBlock.LIT);
+			return Scenes.lit(world, lamp());
 		}
 
 		/** The lever on ({@code true}) or off, as a student would pull it. */
@@ -169,7 +150,7 @@ final class BoardChecks {
 
 		@Override
 		public boolean untouched() {
-			return blocks.entrySet().stream().allMatch(block -> world.getBlockState(block.getKey()).is(block.getValue().getBlock()));
+			return Scenes.untouched(world, blocks);
 		}
 
 		@Override
@@ -184,9 +165,14 @@ final class BoardChecks {
 	private record NoRoom() {
 
 		Component text() {
-			return Component.translatableWithFallback("mine.lesson.check.board_room",
-					"Not yet: MINE needs room around Byte, and solid ground in front and on its left. Move it to an open space with /mine byte recall.");
+			return noRoom();
 		}
+	}
+
+	/** What the student is told when there's no room for the scene. */
+	static Component noRoom() {
+		return Component.translatableWithFallback("mine.lesson.check.board_room",
+				"Not yet: MINE needs room around Byte, and solid ground in front and on its left. Move it to an open space with /mine byte recall.");
 	}
 
 	/** Whether a value told to the board means "on": anything but nothing, 0, false or off. */
@@ -202,7 +188,7 @@ final class BoardChecks {
 
 		final Scene scene;
 		@Nullable
-		SensorChecks.Timeline timeline;
+		LiveTest timeline;
 
 		Run(Scene scene) {
 			this.scene = scene;
@@ -224,12 +210,7 @@ final class BoardChecks {
 
 		abstract Part part();
 
-		abstract SensorChecks.Timeline test(Scene scene, UUID student);
-
-		@Override
-		public Object start(AgentProgram program) {
-			return prepare(program.world(), program.startPos(), program.startFacing());
-		}
+		abstract LiveTest test(Scene scene, UUID student);
 
 		@Override
 		public Object prepare(ServerLevel world, BlockPos start, Direction ahead) {
@@ -268,8 +249,7 @@ final class BoardChecks {
 			if (memo instanceof Run run && run.timeline != null && run.timeline.failure != null) {
 				return run.timeline.failure;
 			}
-			return Component.translatableWithFallback("mine.lesson.check.keep_listening",
-					"Not yet: your program ended before MINE could try it. Keep it listening: while true do ... end.");
+			return Checks.keepListening();
 		}
 	}
 
@@ -287,12 +267,12 @@ final class BoardChecks {
 		}
 
 		@Override
-		SensorChecks.Timeline test(Scene s, UUID student) {
+		LiveTest test(Scene s, UUID student) {
 			Runnable press = () -> Devices.play(s.world().getServer(), student, BUTTON, "1");
 			Supplier<Component> stayedClosed = () -> Component.translatableWithFallback("mine.lesson.check.board_door_closed",
 					"Not yet: MINE pressed A on your board (pulsante_a:1), but the door didn't open.");
 			// Ticks from the press: open by 16, still open at 44 (2.2 s), closed at 110 (5.5 s).
-			return new SensorChecks.Timeline(s.world(), s)
+			return LiveTest.inGameTime(s.world(), s)
 					.then(null, null, press, 16)
 					.then(s::open, stayedClosed, null, 28)
 					.then(s::open, () -> Component.translatableWithFallback("mine.lesson.check.board_door_too_soon",
@@ -317,9 +297,9 @@ final class BoardChecks {
 		}
 
 		@Override
-		SensorChecks.Timeline test(Scene s, UUID student) {
+		LiveTest test(Scene s, UUID student) {
 			int[] light = { 0 };
-			SensorChecks.Timeline timeline = new SensorChecks.Timeline(s.world(), s);
+			LiveTest timeline = LiveTest.inGameTime(s.world(), s);
 			for (int value : new int[] { 200, 10, 180, 20 }) {
 				// The board sends its light now and again: twice, half a second apart, then MINE looks.
 				Runnable send = () -> {
@@ -334,8 +314,7 @@ final class BoardChecks {
 		}
 
 		private static Component wrongLamp(int light, boolean lit) {
-			Component lamp = lit ? Component.translatableWithFallback("mine.lesson.check.on", "on")
-					: Component.translatableWithFallback("mine.lesson.check.off", "off");
+			Component lamp = Checks.onOff(lit);
 			return Component.translatableWithFallback("mine.lesson.check.board_lamp",
 					"Not yet: the board said luce:%s, and the lamp was %s. It must be on only when the light is below 50.", light, lamp);
 		}
@@ -355,12 +334,12 @@ final class BoardChecks {
 		}
 
 		@Override
-		SensorChecks.Timeline test(Scene s, UUID student) {
+		LiveTest test(Scene s, UUID student) {
 			Supplier<Component> notOn = () -> Component.translatableWithFallback("mine.lesson.check.board_heart_on",
 					"Not yet: MINE pulled the lever on, but Byte didn't tell the board cuore:1.");
 			Supplier<Component> notOff = () -> Component.translatableWithFallback("mine.lesson.check.board_heart_off",
 					"Not yet: MINE put the lever back, but Byte didn't tell the board cuore:0.");
-			return new SensorChecks.Timeline(s.world(), s)
+			return LiveTest.inGameTime(s.world(), s)
 					.then(null, null, () -> s.pull(true), 30)
 					.then(() -> on(Devices.lastSent(student, HEART)), notOn, () -> s.pull(false), 30)
 					.then(() -> !on(Devices.lastSent(student, HEART)), notOff, () -> s.pull(true), 30)

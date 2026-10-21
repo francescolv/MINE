@@ -20,8 +20,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * Lesson 15, the farm: nested loops and conditions, like Minecraft Education's farming lessons
@@ -33,7 +31,6 @@ import java.util.regex.Pattern;
  */
 final class FarmChecks {
 
-	private static final Pattern NUMBER = Pattern.compile("-?\\d+");
 	/** A young crop: never ripe during a program, and never as young as a crop just planted. */
 	private static final int YOUNG_MIN = 2;
 	private static final int YOUNG_MAX = 4;
@@ -56,11 +53,6 @@ final class FarmChecks {
 		).apply(instance, Farm::new));
 
 		@Override
-		public Object start(AgentProgram program) {
-			return prepare(program.world(), program.startPos(), program.startFacing());
-		}
-
-		@Override
 		public Object prepare(ServerLevel world, BlockPos start, Direction ahead) {
 			return Field.dig(world, start, ahead, width, length, harvest);
 		}
@@ -74,7 +66,7 @@ final class FarmChecks {
 				return field.sown() == field.crops().size();
 			}
 			return field.harvested() == field.ripe().size() && field.youngCut() == 0
-					&& (!count || said(program).contains(field.ripe().size()));
+					&& (!count || Checks.numbersSaid(program).contains(field.ripe().size()));
 		}
 
 		@Override
@@ -95,7 +87,7 @@ final class FarmChecks {
 						"Not yet: there were %s ripe crops: Byte harvested and planted again %s, and cut %s young ones.",
 						field.ripe().size(), field.harvested(), field.youngCut());
 			}
-			List<Integer> said = said(program);
+			List<Integer> said = Checks.numbersSaid(program);
 			return Component.translatableWithFallback("mine.lesson.check.farm_count",
 					"Not yet: Byte harvested %s crops, but said %s. Count them with a variable.",
 					field.ripe().size(), said.isEmpty() ? "-" : said.getLast().toString());
@@ -108,18 +100,6 @@ final class FarmChecks {
 			}
 		}
 
-		private static List<Integer> said(AgentProgram program) {
-			List<Integer> numbers = new ArrayList<>();
-			for (String message : program.messages()) {
-				Matcher matcher = NUMBER.matcher(message);
-				while (matcher.find()) {
-					if (matcher.group().length() < 6) {
-						numbers.add(Integer.parseInt(matcher.group()));
-					}
-				}
-			}
-			return numbers;
-		}
 	}
 
 	/**
@@ -164,10 +144,10 @@ final class FarmChecks {
 			List<BlockPos> ripe = new ArrayList<>();
 			if (planted) {
 				RandomSource random = world.getRandom();
-				// At least one ripe and one young, in new places every time.
+				// At least one ripe and one young (a field of one: just ripe), in new places every time.
 				List<BlockPos> shuffled = new ArrayList<>(crops);
 				java.util.Collections.shuffle(shuffled, new java.util.Random(random.nextLong()));
-				int howMany = 1 + random.nextInt(crops.size() - 1);
+				int howMany = crops.size() < 2 ? crops.size() : 1 + random.nextInt(crops.size() - 1);
 				ripe.addAll(shuffled.subList(0, howMany));
 				for (BlockPos pos : crops) {
 					int age = ripe.contains(pos) ? CropBlock.MAX_AGE : YOUNG_MIN + random.nextInt(YOUNG_MAX - YOUNG_MIN + 1);

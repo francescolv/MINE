@@ -41,8 +41,8 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Keeps track of running turtles, to know where an Agent is after it has moved.
  *
- * <p>This is the only class that depends on the CC: Tweaked API: it must only be loaded when
- * the mod is installed, and its public signatures use Minecraft types only.
+ * <p>It uses the CC: Tweaked API: it must only be loaded when the mod is installed, and its
+ * signatures used by the rest of MINE use Minecraft types only.
  */
 final class AgentTracker {
 
@@ -219,8 +219,7 @@ final class AgentTracker {
 			if (sent.isEmpty()) {
 				return new Object[0];
 			}
-			ServerPlayer player = world.getServer().getPlayerList().getPlayer(owner);
-			String language = player != null ? player.clientInformation().language() : "en_us";
+			String language = ownerLanguage(world, owner);
 			List<Component> lines = sent.keySet().stream().<Component>map(name -> Component.translatableWithFallback(
 					"mine.blocks.received", "From the blocks: %s (type %s to run it)", name, name)).toList();
 			return new Object[] { sent, render(lines, language) };
@@ -288,8 +287,7 @@ final class AgentTracker {
 			finished.finish(turtle.getPosition(), turtle.getDirection(), ok,
 					inventory.getItem(selected).getCount(), others);
 
-			ServerPlayer owner = finished.world().getServer().getPlayerList().getPlayer(finished.owner());
-			String language = owner != null ? owner.clientInformation().language() : "en_us";
+			String language = ownerLanguage(finished.world(), finished.owner());
 			return finished.told().stream().map(line -> ServerLanguage.render(line, language)).toList();
 		}
 
@@ -308,8 +306,7 @@ final class AgentTracker {
 			if (turtle.getUpgrade(TurtleSide.LEFT) == null && turtle.getUpgrade(TurtleSide.RIGHT) == null) {
 				pickaxe(world.getServer()).ifPresent(pickaxe -> turtle.setUpgrade(TurtleSide.LEFT, pickaxe));
 			}
-			ServerPlayer player = world.getServer().getPlayerList().getPlayer(owner);
-			String language = player != null ? player.clientInformation().language() : "en_us";
+			String language = ownerLanguage(world, owner);
 			AgentKit.Kit kit = AgentKit.prepare(world.getServer(), owner, language, turtle.getInventory(), turtle.getSelectedSlot());
 			if (kit == null) {
 				return new Object[0];

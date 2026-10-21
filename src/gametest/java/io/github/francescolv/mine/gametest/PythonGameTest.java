@@ -3,7 +3,6 @@ package io.github.francescolv.mine.gametest;
 import dan200.computercraft.shared.computer.core.ServerComputer;
 import dan200.computercraft.shared.turtle.blocks.TurtleBlockEntity;
 import io.github.francescolv.mine.MineMod;
-import io.github.francescolv.mine.agent.AgentManager;
 import io.github.francescolv.mine.blocks.BlockPrograms;
 import io.github.francescolv.mine.blocks.BlockSessions;
 import io.github.francescolv.mine.blocks.ThonnyKeys;
@@ -45,10 +44,7 @@ public class PythonGameTest {
 	public void pythonCallsRunOnByte(GameTestHelper ctx) {
 		int port = BlockEditorGameTest.editor(ctx.getLevel().getServer());
 		ServerPlayer student = ctx.makeMockServerPlayerInLevel();
-		BlockPos feet = ctx.absolutePos(BYTE.north());
-		student.snapTo(feet.getX() + 0.5, feet.getY(), feet.getZ() + 0.5, 0.0f, 0.0f);
-		ctx.assertTrue(AgentManager.spawn(student) == AgentManager.Result.SPAWNED, "Byte not created");
-		ServerComputer computer = ctx.getBlockEntity(BYTE, TurtleBlockEntity.class).createServerComputer();
+		ServerComputer computer = GameTests.spawnAgent(ctx, student, BYTE).createServerComputer();
 		computer.turnOn();
 		LessonManager.start(student, Lessons.get("first_steps"));
 		String base = "http://127.0.0.1:" + port;
@@ -80,7 +76,7 @@ public class PythonGameTest {
 						answers.add(call(http, base, code, "byte.forward", "[]"));
 					});
 				} else {
-					run[0] = http.sendAsync(request(base + "/api/py/run?code=" + code, "{\"name\": \"prova\"}"),
+					run[0] = http.sendAsync(GameTests.post(base + "/api/py/run?code=" + code, "{\"name\": \"prova\"}"),
 							HttpResponse.BodyHandlers.ofString());
 				}
 			}
@@ -110,10 +106,7 @@ public class PythonGameTest {
 	public void aPythonProgramBuildsLessonOnesTower(GameTestHelper ctx) {
 		int port = BlockEditorGameTest.editor(ctx.getLevel().getServer());
 		ServerPlayer student = ctx.makeMockServerPlayerInLevel();
-		BlockPos feet = ctx.absolutePos(BYTE.north());
-		student.snapTo(feet.getX() + 0.5, feet.getY(), feet.getZ() + 0.5, 0.0f, 0.0f);
-		ctx.assertTrue(AgentManager.spawn(student) == AgentManager.Result.SPAWNED, "Byte not created");
-		TurtleBlockEntity turtle = ctx.getBlockEntity(BYTE, TurtleBlockEntity.class);
+		TurtleBlockEntity turtle = GameTests.spawnAgent(ctx, student, BYTE);
 		turtle.createServerComputer().turnOn();
 		turtle.getAccess().getInventory().setItem(0, new ItemStack(Items.OAK_PLANKS, 3));
 		LessonManager.start(student, Lessons.get("first_steps"));
@@ -153,10 +146,7 @@ public class PythonGameTest {
 	public void thonnyDrivesByteFromThePc(GameTestHelper ctx) {
 		int port = BlockEditorGameTest.editor(ctx.getLevel().getServer());
 		ServerPlayer student = ctx.makeMockServerPlayerInLevel();
-		BlockPos feet = ctx.absolutePos(BYTE.north());
-		student.snapTo(feet.getX() + 0.5, feet.getY(), feet.getZ() + 0.5, 0.0f, 0.0f);
-		ctx.assertTrue(AgentManager.spawn(student) == AgentManager.Result.SPAWNED, "Byte not created");
-		ctx.getBlockEntity(BYTE, TurtleBlockEntity.class).createServerComputer().turnOn();
+		GameTests.spawnAgent(ctx, student, BYTE).createServerComputer().turnOn();
 		String base = "http://127.0.0.1:" + port;
 		// The student's code for Thonny, the same every day: mine.py remembers it in mine.txt.
 		String key = ThonnyKeys.get(ctx.getLevel().getServer()).keyFor(student.getUUID());
@@ -236,10 +226,7 @@ public class PythonGameTest {
 		MinecraftServer server = ctx.getLevel().getServer();
 		int port = BlockEditorGameTest.editor(server);
 		ServerPlayer student = ctx.makeMockServerPlayerInLevel();
-		BlockPos feet = ctx.absolutePos(LessonGameTest.LAB_AGENT.north());
-		student.snapTo(feet.getX() + 0.5, feet.getY(), feet.getZ() + 0.5, 0.0f, 0.0f);
-		ctx.assertTrue(AgentManager.spawn(student) == AgentManager.Result.SPAWNED, "Byte not created");
-		TurtleBlockEntity turtle = ctx.getBlockEntity(LessonGameTest.LAB_AGENT, TurtleBlockEntity.class);
+		TurtleBlockEntity turtle = GameTests.spawnAgent(ctx, student, LessonGameTest.LAB_AGENT);
 		turtle.createServerComputer().turnOn();
 		turtle.getAccess().getInventory().setItem(0, new ItemStack(Items.OAK_PLANKS, 64));
 		String code = BlockSessions.codeFor(student.getUUID());
@@ -310,14 +297,10 @@ public class PythonGameTest {
 
 	private static String post(HttpClient http, String url, String json) {
 		try {
-			return http.send(request(url, json), HttpResponse.BodyHandlers.ofString()).body();
+			return http.send(GameTests.post(url, json), HttpResponse.BodyHandlers.ofString()).body();
 		} catch (Exception e) {
 			return e.toString();
 		}
 	}
 
-	private static HttpRequest request(String url, String json) {
-		return HttpRequest.newBuilder(URI.create(url)).header("Content-Type", "application/json")
-				.POST(HttpRequest.BodyPublishers.ofString(json)).build();
-	}
 }

@@ -8,18 +8,14 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.LeverBlock;
-import net.minecraft.world.level.block.RedstoneLampBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.AttachFace;
-import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiPredicate;
 
 /**
  * Lesson 6, the Agent and redstone. MINE builds one scene around the Agent for the whole lesson:
@@ -67,28 +63,15 @@ final class RedstoneChecks {
 			BlockPos door = agent.relative(ahead);
 			Map<BlockPos, BlockState> blocks = new LinkedHashMap<>();
 			blocks.put(agent.relative(ahead.getOpposite()), Blocks.REDSTONE_LAMP.defaultBlockState());
-			blocks.put(door, Blocks.IRON_DOOR.defaultBlockState().setValue(DoorBlock.FACING, ahead)
-					.setValue(DoorBlock.HALF, DoubleBlockHalf.LOWER));
-			blocks.put(door.above(), Blocks.IRON_DOOR.defaultBlockState().setValue(DoorBlock.FACING, ahead)
-					.setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER));
+			Scenes.ironDoor(blocks, door, ahead);
 			blocks.put(agent.relative(left), Blocks.STONE.defaultBlockState());
 			blocks.put(agent.relative(left, 2), lever(left));
 			blocks.put(agent.relative(right), Blocks.STONE.defaultBlockState());
 			blocks.put(agent.relative(right, 2), lever(right));
-			if (!world.getBlockState(door.below()).isFaceSturdy(world, door.below(), Direction.UP)) {
+			if (!Scenes.fits(world, blocks, List.of(door))) {
 				return new NoRoom();
 			}
-			for (Map.Entry<BlockPos, BlockState> block : blocks.entrySet()) {
-				BlockState there = world.getBlockState(block.getKey());
-				if (!there.is(block.getValue().getBlock()) && !there.canBeReplaced()) {
-					return new NoRoom();
-				}
-			}
-			blocks.forEach((pos, state) -> {
-				if (!world.getBlockState(pos).is(state.getBlock())) {
-					world.setBlock(pos, state, Block.UPDATE_ALL);
-				}
-			});
+			Scenes.place(world, blocks);
 			Scene scene = new Scene(world, agent, ahead, blocks);
 			scene.pull(true, false);
 			scene.pull(false, false);
@@ -101,13 +84,17 @@ final class RedstoneChecks {
 		}
 
 		boolean lit() {
-			BlockState lamp = world.getBlockState(lamp());
-			return lamp.is(Blocks.REDSTONE_LAMP) && lamp.getValue(RedstoneLampBlock.LIT);
+			return Scenes.lit(world, lamp());
 		}
 
 		boolean open() {
-			BlockState door = world.getBlockState(door());
-			return door.is(Blocks.IRON_DOOR) && door.getValue(DoorBlock.OPEN);
+			return Scenes.open(world, door());
+		}
+
+		/** Puts the levers (left, right) on or off. */
+		void pull(boolean[] levers) {
+			pull(true, levers[0]);
+			pull(false, levers[1]);
 		}
 
 		/** Puts a lever on or off, as a player pulling it would. */
@@ -123,7 +110,7 @@ final class RedstoneChecks {
 
 		@Override
 		public boolean untouched() {
-			return blocks.entrySet().stream().allMatch(block -> world.getBlockState(block.getKey()).is(block.getValue().getBlock()));
+			return Scenes.untouched(world, blocks);
 		}
 
 		@Override
@@ -142,79 +129,8 @@ final class RedstoneChecks {
 
 		Component text() {
 			return Component.translatableWithFallback("mine.lesson.check.redstone_room",
-					"Not yet: MINE needs room around Byte for the lamp, the door and the levers, and solid ground in front. Move it to an open space with /mine byte recall.");
+					"Not yet: MINE needs room around Byte for the lamp, the door and the levers, and solid ground in front. Go to an open space and type /mine byte recall: your Byte comes to you.");
 		}
-	}
-
-	/**
-	 * A live test: MINE sets the levers one way after the other while the program runs, and after
-	 * each move looks whether the Agent did what it should. {@code moves} are the levers' positions
-	 * (left, right), the first one set when the program starts.
-	 */
-	private static final class Probe implements Checks.Challenge {
-
-		final Scene scene;
-		final List<boolean[]> moves;
-		final BiPredicate<Scene, boolean[]> right;
-		/** When MINE looks next; the clock starts with the program (the probe may be built before). */
-		long next = -1;
-		int move;
-		boolean passed;
-		@Nullable
-		boolean[] failedAt;
-
-		Probe(Scene scene, List<boolean[]> moves, BiPredicate<Scene, boolean[]> right) {
-			this.scene = scene;
-			this.moves = moves;
-			this.right = right;
-			set(moves.getFirst());
-		}
-
-		private void set(boolean[] levers) {
-			scene.pull(true, levers[0]);
-			scene.pull(false, levers[1]);
-		}
-
-		/** One tick of the test; {@code true} when it is over, passed or not. */
-		boolean tick() {
-			if (next < 0) {
-				next = System.currentTimeMillis() + SETTLE_MS;
-			}
-			if (passed || failedAt != null || System.currentTimeMillis() < next) {
-				return passed || failedAt != null;
-			}
-			boolean[] levers = moves.get(move);
-			if (!right.test(scene, levers)) {
-				failedAt = levers;
-				return true;
-			}
-			if (++move == moves.size()) {
-				passed = true;
-				return true;
-			}
-			set(moves.get(move));
-			next = System.currentTimeMillis() + STEP_MS;
-			return false;
-		}
-
-		@Override
-		public boolean untouched() {
-			return scene.untouched();
-		}
-
-		@Override
-		public void remove() {
-			scene.remove();
-		}
-	}
-
-	private static Object scene(ServerLevel world, BlockPos pos, Direction facing) {
-		return Scene.build(world, pos, facing);
-	}
-
-	private static Component onOff(boolean on) {
-		return on ? Component.translatableWithFallback("mine.lesson.check.on", "on")
-				: Component.translatableWithFallback("mine.lesson.check.off", "off");
 	}
 
 	/** Done when the lamp behind the Agent is on when the program ends. */
@@ -223,13 +139,8 @@ final class RedstoneChecks {
 		static final MapCodec<Lamp> CODEC = MapCodec.unit(Lamp::new);
 
 		@Override
-		public Object start(AgentProgram program) {
-			return prepare(program.world(), program.startPos(), program.startFacing());
-		}
-
-		@Override
 		public Object prepare(ServerLevel world, BlockPos start, Direction ahead) {
-			return scene(world, start, ahead);
+			return Scene.build(world, start, ahead);
 		}
 
 		@Override
@@ -244,104 +155,120 @@ final class RedstoneChecks {
 	}
 
 	/**
-	 * Tested live: MINE pulls the left lever on, off and on again, and each time the door in front
-	 * of the Agent must follow it, open with the lever on and closed with it off.
+	 * Tested live: MINE pulls the levers in turn ({@link #moves}, left and right), and after each
+	 * move the scene must be {@link #right}.
 	 */
-	record LeverDoor() implements Check {
+	interface LeverTest extends Check {
 
-		static final MapCodec<LeverDoor> CODEC = MapCodec.unit(LeverDoor::new);
+		List<boolean[]> moves();
 
+		boolean right(Scene scene, boolean[] levers);
+
+		/** What went wrong with the levers as they were. */
+		Component failed(boolean[] levers);
+
+		/**
+		 * The levers are set the first way at once; then, after each look, MINE sets them the next
+		 * way and gives the program time to answer.
+		 */
 		@Override
-		public Object start(AgentProgram program) {
-			return prepare(program.world(), program.startPos(), program.startFacing());
+		default Object prepare(ServerLevel world, BlockPos start, Direction ahead) {
+			if (!(Scene.build(world, start, ahead) instanceof Scene scene)) {
+				return new NoRoom();
+			}
+			List<boolean[]> moves = moves();
+			scene.pull(moves.getFirst());
+			LiveTest test = new LiveTest(scene, SETTLE_MS);
+			for (int i = 0; i < moves.size(); i++) {
+				boolean[] levers = moves.get(i);
+				boolean[] then = i + 1 < moves.size() ? moves.get(i + 1) : null;
+				test.then(() -> right(scene, levers), () -> failed(levers), then == null ? null : () -> scene.pull(then), STEP_MS);
+			}
+			return test;
 		}
 
 		@Override
-		public Object prepare(ServerLevel world, BlockPos start, Direction ahead) {
-			Object scene = scene(world, start, ahead);
-			return scene instanceof Scene built ? new Probe(built,
-					List.of(new boolean[] { false, false }, new boolean[] { true, false }, new boolean[] { false, false },
-							new boolean[] { true, false }),
-					(at, levers) -> at.open() == levers[0]) : scene;
-		}
-
-		@Override
-		public boolean watch(AgentProgram program, @Nullable Object memo) {
+		default boolean watch(AgentProgram program, @Nullable Object memo) {
 			// No room for the scene: stop at once, so the student is told instead of waiting.
-			return memo instanceof NoRoom || memo instanceof Probe probe && probe.tick();
+			return memo instanceof NoRoom || memo instanceof LiveTest test && test.tick();
 		}
 
 		@Override
-		public boolean passed(AgentProgram program, @Nullable Object memo) {
-			return memo instanceof Probe probe && probe.passed;
+		default boolean passed(AgentProgram program, @Nullable Object memo) {
+			return memo instanceof LiveTest test && test.passed;
 		}
 
 		@Override
-		public @Nullable Component whyNot(AgentProgram program, @Nullable Object memo) {
+		default @Nullable Component whyNot(AgentProgram program, @Nullable Object memo) {
 			if (memo instanceof NoRoom noRoom) {
 				return noRoom.text();
 			}
-			if (memo instanceof Probe probe && probe.failedAt != null) {
-				return probe.failedAt[0]
-						? Component.translatableWithFallback("mine.lesson.check.door_closed",
-								"Not yet: MINE put the lever on, but the door stayed closed.")
-						: Component.translatableWithFallback("mine.lesson.check.door_open",
-								"Not yet: MINE put the lever off, but the door stayed open.");
+			if (memo instanceof LiveTest test && test.failure != null) {
+				return test.failure;
 			}
 			return endedEarly();
 		}
 	}
 
 	/**
-	 * Tested live: MINE tries the two levers in all four ways, and the lamp behind the Agent
-	 * must be on only when both are on (an AND gate).
+	 * MINE pulls the left lever on, off and on again, and each time the door in front of the
+	 * Agent must follow it, open with the lever on and closed with it off.
 	 */
-	record LeverAnd() implements Check {
+	record LeverDoor() implements LeverTest {
+
+		static final MapCodec<LeverDoor> CODEC = MapCodec.unit(LeverDoor::new);
+
+		@Override
+		public List<boolean[]> moves() {
+			return List.of(new boolean[] { false, false }, new boolean[] { true, false }, new boolean[] { false, false },
+					new boolean[] { true, false });
+		}
+
+		@Override
+		public boolean right(Scene scene, boolean[] levers) {
+			return scene.open() == levers[0];
+		}
+
+		@Override
+		public Component failed(boolean[] levers) {
+			return levers[0]
+					? Component.translatableWithFallback("mine.lesson.check.door_closed",
+							"Not yet: MINE put the lever on, but the door stayed closed.")
+					: Component.translatableWithFallback("mine.lesson.check.door_open",
+							"Not yet: MINE put the lever off, but the door stayed open.");
+		}
+	}
+
+	/**
+	 * MINE tries the two levers in all four ways, and the lamp behind the Agent must be on only
+	 * when both are on (an AND gate).
+	 */
+	record LeverAnd() implements LeverTest {
 
 		static final MapCodec<LeverAnd> CODEC = MapCodec.unit(LeverAnd::new);
 
 		@Override
-		public Object start(AgentProgram program) {
-			return prepare(program.world(), program.startPos(), program.startFacing());
+		public List<boolean[]> moves() {
+			return List.of(new boolean[] { false, false }, new boolean[] { true, false }, new boolean[] { false, true },
+					new boolean[] { true, true }, new boolean[] { false, false });
 		}
 
 		@Override
-		public Object prepare(ServerLevel world, BlockPos start, Direction ahead) {
-			Object scene = scene(world, start, ahead);
-			return scene instanceof Scene built ? new Probe(built,
-					List.of(new boolean[] { false, false }, new boolean[] { true, false }, new boolean[] { false, true },
-							new boolean[] { true, true }, new boolean[] { false, false }),
-					(at, levers) -> at.lit() == (levers[0] && levers[1])) : scene;
+		public boolean right(Scene scene, boolean[] levers) {
+			return scene.lit() == (levers[0] && levers[1]);
 		}
 
 		@Override
-		public boolean watch(AgentProgram program, @Nullable Object memo) {
-			// No room for the scene: stop at once, so the student is told instead of waiting.
-			return memo instanceof NoRoom || memo instanceof Probe probe && probe.tick();
-		}
-
-		@Override
-		public boolean passed(AgentProgram program, @Nullable Object memo) {
-			return memo instanceof Probe probe && probe.passed;
-		}
-
-		@Override
-		public @Nullable Component whyNot(AgentProgram program, @Nullable Object memo) {
-			if (memo instanceof NoRoom noRoom) {
-				return noRoom.text();
-			}
-			if (memo instanceof Probe probe && probe.failedAt != null) {
-				return Component.translatableWithFallback("mine.lesson.check.and_gate",
-						"Not yet: with the left lever %s and the right one %s, the lamp was %s. It must be on only when both levers are on.",
-						onOff(probe.failedAt[0]), onOff(probe.failedAt[1]), onOff(!(probe.failedAt[0] && probe.failedAt[1])));
-			}
-			return endedEarly();
+		public Component failed(boolean[] levers) {
+			return Component.translatableWithFallback("mine.lesson.check.and_gate",
+					"Not yet: with the left lever %s and the right one %s, the lamp was %s. It must be on only when both levers are on.",
+					Checks.onOff(levers[0]), Checks.onOff(levers[1]), Checks.onOff(!(levers[0] && levers[1])));
 		}
 	}
 
 	/** The program ended by itself before MINE had tried the levers. */
 	private static Component endedEarly() {
 		return Component.translatableWithFallback("mine.lesson.check.listen",
-				"Not yet: your program ended before MINE could try the levers. Keep it listening: while true do ... end.");
+				"Not yet: your program ended before MINE could try the levers. Keep it listening with a loop that never ends (while true do ... end, or \"repeat while true\").");
 	}
 }

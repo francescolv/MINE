@@ -29,6 +29,8 @@ MINE is meant to be an international project:
   beside `README.md`. Italian is maintained today; other languages are welcome.
 - **Text players see in game** lives only in the translation files (`assets/mine/lang/`):
   `en_us.json` is the reference, every other language follows it. Don't hard-code it in Java or Lua.
+  The English fallback written in Java must say the same as `en_us.json`: `node tools/check-lang.js`
+  checks it (CI runs it, with `node tools/blocks-to-lua.js --check` and `node tools/check-mine-py.js`).
 
 ## Rules
 

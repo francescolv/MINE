@@ -6,7 +6,6 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.MultiLineEditBox;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 
 import java.util.ArrayList;
@@ -71,10 +70,7 @@ final class TextEditScreen extends Screen {
 				turn(page >= pages.size() ? -1 : 0);
 			}).bounds(width / 2 + 54, y, 96, 20).build()).active = pages.size() > 1;
 		}
-		addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, b -> save())
-				.bounds(width / 2 - 150, height - 26, 148, 20).build());
-		addRenderableWidget(Button.builder(CommonComponents.GUI_CANCEL, b -> onClose())
-				.bounds(width / 2 + 2, height - 26, 148, 20).build());
+		MineScreens.doneAndCancel(this::addRenderableWidget, width, height - 26, 146, b -> save(), b -> onClose());
 	}
 
 	private void turn(int by) {
@@ -90,15 +86,15 @@ final class TextEditScreen extends Screen {
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
 		super.extractRenderState(context, mouseX, mouseY, delta);
-		context.centeredText(font, title, width / 2, 12, 0xFFFFFFFF);
+		context.centeredText(font, title, width / 2, 12, MineScreens.WHITE);
 		context.centeredText(font, paged()
 				? Component.translatableWithFallback("mine.writing.npc_help",
 						"One page, one screen. [text](/command) is a button; lines with [ ] and [x] make a question.")
 				: Component.translatableWithFallback("mine.writing.board_help", "Lines starting with # are titles."),
-				width / 2, 26, 0xFFA0A0A0);
+				width / 2, 26, MineScreens.GRAY);
 		if (paged()) {
 			context.centeredText(font, Component.translatableWithFallback("mine.writing.page", "%s / %s", page + 1, pages.size()),
-					width / 2 - 100, height - 44, 0xFFFFFFFF);
+					width / 2 - 100, height - 44, MineScreens.WHITE);
 		}
 	}
 }

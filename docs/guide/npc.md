@@ -30,7 +30,7 @@ remove pages. Write and press **Done**: *"Ada will now say the 3 pages of your b
 
 ### With a book and quill
 
-The same works with a book, also in a game without MINE:
+The same works with a book:
 
 1. Take a **book and quill** from the Creative inventory (`E` key). Hold it and **right-click in
    the air**, not on the NPC, to open it and write in it. **Each page is one screen** of the
@@ -129,10 +129,8 @@ back, and the page shows it with ⚠.
 
 Students right-click the NPC: its dialogue opens in a **book window**, with the NPC's name at
 the top, the book's arrows to turn the pages, and buttons they click with the mouse. Nothing is
-added to their inventory, and they don't need anything installed: an NPC is a Minecraft
-villager, and the dialogue lives on the server. Only one thing needs MINE in the student's game
-(the MINE modpack): after answering a question, the book opens again **on the same page**.
-Without it, the book opens again starting from that page, and the pages before it can't be read.
+added to their inventory: an NPC is a Minecraft villager, and the dialogue lives on the server.
+After answering a question, the book opens again **on the same page**.
 
 ## Quiz results
 

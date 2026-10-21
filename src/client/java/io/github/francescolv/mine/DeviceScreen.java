@@ -24,6 +24,8 @@ final class DeviceScreen extends Screen {
 	/** The port connected when the buttons were made. */
 	@Nullable
 	private String shownPort;
+	/** The boards found when the window was made (or Look again): asking the system every frame is slow. */
+	private List<ClientDevices.Choice> ports = List.of();
 
 	DeviceScreen() {
 		super(Component.translatableWithFallback("mine.device.title", "Your board"));
@@ -42,7 +44,7 @@ final class DeviceScreen extends Screen {
 				rebuildWidgets();
 			}).bounds(left, y, 150, 20).build());
 		} else {
-			List<ClientDevices.Choice> ports = ClientDevices.ports();
+			ports = ClientDevices.ports();
 			for (ClientDevices.Choice choice : ports.subList(0, Math.min(MAX_PORTS, ports.size()))) {
 				addRenderableWidget(Button.builder(Component.literal(ClientDevices.label(choice)), button -> {
 					String problem = ClientDevices.connect(choice.name());
@@ -64,27 +66,27 @@ final class DeviceScreen extends Screen {
 	public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
 		super.extractRenderState(context, mouseX, mouseY, delta);
 		int left = width / 2 - 155;
-		context.centeredText(font, title, width / 2, 14, 0xFFFFFFFF);
+		context.centeredText(font, title, width / 2, 14, MineScreens.WHITE);
 		String connected = ClientDevices.connectedPort();
 		if (connected != null) {
 			context.centeredText(font, Component.translatableWithFallback("mine.device.connected",
-					"Connected: %s", connected), width / 2, 32, 0xFF55FF55);
+					"Connected: %s", connected), width / 2, 32, MineScreens.GREEN);
 			ClientDevices.BoardProgram program = ClientDevices.program();
 			context.centeredText(font, program != null
 					? Component.translatableWithFallback("mine.device.program", "On the board: %s (started at %s)",
 							program.name(), program.since().toString())
 					: Component.translatableWithFallback("mine.device.no_program",
 							"To see its name here, the board's program writes programma:name when it starts."),
-					width / 2, 46, program != null ? 0xFF55FFFF : 0xFF808080);
-		} else if (ClientDevices.ports().isEmpty()) {
+					width / 2, 46, program != null ? MineScreens.AQUA : MineScreens.DARK_GRAY);
+		} else if (ports.isEmpty()) {
 			context.centeredText(font, Component.translatableWithFallback("mine.device.none",
-					"No board found: plug it in with its USB cable, then Look again."), width / 2, 32, 0xFFFFFF55);
+					"No board found: plug it in with its USB cable, then Look again."), width / 2, 32, MineScreens.YELLOW);
 		} else {
 			context.centeredText(font, Component.translatableWithFallback("mine.device.choose",
-					"Choose your board:"), width / 2, 32, 0xFFA0A0A0);
+					"Choose your board:"), width / 2, 32, MineScreens.GRAY);
 		}
 		if (error != null) {
-			context.centeredText(font, error, width / 2, height - 44, 0xFFFF5555);
+			context.centeredText(font, error, width / 2, height - 44, MineScreens.RED);
 		}
 		if (connected == null) {
 			return;
@@ -99,7 +101,7 @@ final class DeviceScreen extends Screen {
 		int y = top;
 		if (lines.isEmpty()) {
 			context.text(font, Component.translatableWithFallback("mine.device.waiting",
-					"Waiting for the board to write a line key:value…"), left, y, 0xFFA0A0A0, false);
+					"Waiting for the board to write a line key:value…"), left, y, MineScreens.GRAY, false);
 		}
 		for (ClientDevices.Line line : lines.subList(Math.max(0, lines.size() - fit), lines.size())) {
 			Component text = switch (line.kind()) {
@@ -109,10 +111,10 @@ final class DeviceScreen extends Screen {
 				case NOTE -> Component.translatableWithFallback("mine.device.unplugged", "The board was unplugged.");
 			};
 			int colour = switch (line.kind()) {
-				case IN -> 0xFFFFFFFF;
-				case OUT -> 0xFF55FFFF;
-				case IGNORED -> 0xFF808080;
-				case NOTE -> 0xFFFFFF55;
+				case IN -> MineScreens.WHITE;
+				case OUT -> MineScreens.AQUA;
+				case IGNORED -> MineScreens.DARK_GRAY;
+				case NOTE -> MineScreens.YELLOW;
 			};
 			context.text(font, font.plainSubstrByWidth(text.getString(), 310), left, y, colour, false);
 			y += 11;
@@ -120,7 +122,7 @@ final class DeviceScreen extends Screen {
 		String key = ClientDevices.lastKey();
 		if (key != null) {
 			context.centeredText(font, Component.translatableWithFallback("mine.device.hint",
-					"Your Byte reads it with mine.device.read(\"%s\")", key), width / 2, bottom + 6, 0xFFA0A0A0);
+					"Your Byte reads it with mine.device.read(\"%s\")", key), width / 2, bottom + 6, MineScreens.GRAY);
 		}
 	}
 

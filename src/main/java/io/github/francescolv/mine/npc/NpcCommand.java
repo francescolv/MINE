@@ -1,5 +1,6 @@
 package io.github.francescolv.mine.npc;
 
+import io.github.francescolv.mine.Exports;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -263,7 +264,7 @@ public final class NpcCommand {
 		byte[] content = QuizExport.bytes(QuizExport.csv(results));
 		Path file;
 		try {
-			file = QuizExport.save(source.getServer(), fileName, content);
+			file = Exports.save(source.getServer(), fileName, content);
 		} catch (IOException e) {
 			MineMod.LOGGER.error("[MINE] Could not save the quiz answers", e);
 			source.sendFailure(Component.translatableWithFallback("mine.npc.export_failed",

@@ -25,8 +25,7 @@ const TEXTS = {
 			type: 'A value of the wrong kind: for example a number where text is needed. Look at the line.',
 			zero: 'A division by zero.',
 			index: 'You asked for an element the list doesn\'t have: lists start at 0, and the last one is len(list) - 1.',
-			notStarted: 'Byte didn\'t start the program: run it again, and go back to Minecraft.',
-			silent: 'The program stopped talking to Byte: keep this page open while it runs.'
+			notStarted: 'Byte didn\'t start the program: run it again, and go back to Minecraft.'
 		},
 		thonnyTitle: 'Python on your PC, with Thonny',
 		thonnySteps: [
@@ -60,8 +59,7 @@ const TEXTS = {
 			type: 'Un valore del tipo sbagliato: per esempio un numero dove serve un testo. Guarda la riga.',
 			zero: 'Una divisione per zero.',
 			index: 'Hai chiesto un elemento che la lista non ha: le liste partono da 0, e l\'ultimo è len(lista) - 1.',
-			notStarted: 'Byte non ha avviato il programma: eseguilo di nuovo, e torna in Minecraft.',
-			silent: 'Il programma ha smesso di parlare con Byte: tieni aperta questa pagina mentre gira.'
+			notStarted: 'Byte non ha avviato il programma: eseguilo di nuovo, e torna in Minecraft.'
 		},
 		thonnyTitle: 'Python sul tuo PC, con Thonny',
 		thonnySteps: [
@@ -87,33 +85,28 @@ let clean = '';
 let viewing = null;
 let worker = null;
 let errorLine = null;
+/** For the server: the programs and the words of the Python editor. */
+const KIND = 'python';
 
-function $(id) {
-	return document.getElementById(id);
+function current() {
+	return editor.getValue();
 }
 
-function api(path, extra) {
-	return path + '?kind=python&code=' + encodeURIComponent(code) + (extra || '');
+function lockEditing(locked) {
+	$('save').disabled = $('run').disabled = locked;
+	editor.setOption('readOnly', locked);
 }
 
-function expired() {
-	$('expired').textContent = t.expired;
-	$('expired').hidden = false;
-}
-
-function status(text, error) {
-	$('status').className = error ? 'error' : '';
-	$('status').textContent = text;
+function relayout() {
+	if (editor) {
+		editor.refresh();
+	}
 }
 
 function load(source) {
 	editor.setValue(source || '');
 	clean = editor.getValue();
 	markError(null);
-}
-
-function canLeave() {
-	return viewing !== null || editor.getValue() === clean || confirm(t.unsaved);
 }
 
 function fillPrograms(selected) {
@@ -123,129 +116,6 @@ function fillPrograms(selected) {
 		list.add(new Option(name, name));
 	}
 	list.value = (session.programs || []).includes(selected) ? selected : '';
-}
-
-function fillStudents() {
-	if (!session.students || session.students.length === 0) {
-		return;
-	}
-	const list = $('students');
-	list.replaceChildren(new Option(t.students, ''));
-	for (const student of session.students) {
-		for (const name of student.programs) {
-			list.add(new Option(student.name + ': ' + name, student.id + '/' + name));
-		}
-	}
-	list.hidden = false;
-}
-
-function setViewing(what) {
-	viewing = what;
-	$('viewing').hidden = what === null;
-	$('save').disabled = $('run').disabled = what !== null;
-	editor.setOption('readOnly', what !== null);
-	if (what !== null) {
-		$('viewing-text').textContent = t.viewing.replace('%1', what.name).replace('%2', what.owner);
-	}
-}
-
-async function fetchProgram(student, name) {
-	const answer = await fetch(api('api/program', '&student=' + encodeURIComponent(student) + '&name=' + encodeURIComponent(name)));
-	if (answer.status === 403) {
-		expired();
-		return null;
-	}
-	const program = await answer.json();
-	return program.workspace === undefined ? null : program;
-}
-
-async function openOwn(name) {
-	if (!canLeave()) {
-		fillPrograms($('name').value);
-		return;
-	}
-	setViewing(null);
-	if (name === '+') {
-		$('name').value = '';
-		load('');
-		fillPrograms('');
-		$('name').focus();
-		return;
-	}
-	const program = await fetchProgram(session.id, name);
-	if (program) {
-		$('name').value = program.name;
-		load(program.workspace);
-	}
-}
-
-async function openStudent(value) {
-	$('students').value = '';
-	const slash = value.indexOf('/');
-	if (slash < 0 || !canLeave()) {
-		return;
-	}
-	const program = await fetchProgram(value.substring(0, slash), value.substring(slash + 1));
-	if (program) {
-		load(program.workspace);
-		setViewing({owner: program.owner, name: program.name});
-	}
-}
-
-function showLesson(lesson) {
-	$('lesson').hidden = !lesson;
-	if (lesson) {
-		$('lesson-title').textContent = lesson.title;
-		$('lesson-step').textContent = lesson.completed ? '' : t.step.replace('%1', lesson.step).replace('%2', lesson.steps);
-		$('lesson-goal').textContent = lesson.completed ? t.completed + ' ' + lesson.reflection : lesson.goal;
-		$('hint').hidden = lesson.completed || !lesson.more;
-		$('lesson-hints').replaceChildren(...(lesson.hints || []).map(hint => {
-			const item = document.createElement('li');
-			item.textContent = hint;
-			return item;
-		}));
-	}
-	if (editor) {
-		editor.refresh();
-	}
-}
-
-async function askHint() {
-	$('hint').disabled = true;
-	try {
-		const answer = await fetch(api('api/hint'), {method: 'POST'});
-		if (answer.status === 403) {
-			expired();
-			return;
-		}
-		showLesson((await answer.json()).lesson);
-	} catch (e) {
-		status(t.noServer, true);
-	} finally {
-		$('hint').disabled = false;
-	}
-}
-
-/** Back from the game: the lesson may be at another step. The program being edited stays. */
-async function refresh() {
-	if (!session) {
-		return;
-	}
-	try {
-		const answer = await fetch(api('api/session'));
-		if (answer.status === 403) {
-			expired();
-			return;
-		}
-		const fresh = await answer.json();
-		session.programs = fresh.programs;
-		session.students = fresh.students;
-		fillPrograms(viewing === null ? $('name').value.trim() : '');
-		fillStudents();
-		showLesson(fresh.lesson);
-	} catch (e) {
-		// The server may be restarting: the next time will do.
-	}
 }
 
 function out(text, kind) {
@@ -371,6 +241,8 @@ async function run() {
 		const m = event.data;
 		if (m.kind === 'out') {
 			out(m.text);
+		} else if (m.kind === 'err') {
+			out(m.text, 'err');
 		} else if (m.kind === 'call') {
 			status(t.running);
 			$('timing').textContent = t.calls(m.started, m.calls, m.average);

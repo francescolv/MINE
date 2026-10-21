@@ -155,7 +155,6 @@ public class BlockEditorGameTest {
 	}
 
 	private static CompletableFuture<HttpResponse<String>> post(HttpClient http, String url, String json) {
-		return http.sendAsync(HttpRequest.newBuilder(URI.create(url)).header("Content-Type", "application/json")
-				.POST(HttpRequest.BodyPublishers.ofString(json)).build(), HttpResponse.BodyHandlers.ofString());
+		return http.sendAsync(GameTests.post(url, json), HttpResponse.BodyHandlers.ofString());
 	}
 }

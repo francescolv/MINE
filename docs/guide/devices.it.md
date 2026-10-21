@@ -255,7 +255,8 @@ while True:
 - La scheda parla con Byte solo mentre lo studente è nel gioco: prima aspetta, da sola.
 - `mine.receive()` va chiamato spesso, almeno ogni pochi secondi: è lì che la scheda chiede al
   server le righe per lei. Se tace per 10 secondi, MINE la considera scollegata (e la ricollega
-  alla richiesta successiva).
+  alla richiesta successiva). Le righe inviate molto vicine (a meno di 0,15 secondi) partono
+  insieme, con il `mine.send()` o il `mine.receive()` successivo.
 - `/mine device` dice in chat che la scheda è collegata via Wi-Fi e quale programma ci gira.
 - Prima di comprarne tanti, prova con uno: alcune reti Wi-Fi delle scuole non lasciano parlare tra
   loro i dispositivi (isolamento dei client). Se la scheda non trova il server neanche con

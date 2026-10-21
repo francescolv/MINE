@@ -1,12 +1,7 @@
 package io.github.francescolv.mine.npc;
 
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.world.level.storage.LevelResource;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -63,15 +58,6 @@ public final class QuizExport {
 	 */
 	public static byte[] bytes(String csv) {
 		return ("﻿" + csv).getBytes(StandardCharsets.UTF_8);
-	}
-
-	/** Saves the file in the world's {@code mine/exports} folder and returns where. */
-	public static Path save(MinecraftServer server, String fileName, byte[] content) throws IOException {
-		Path folder = server.getWorldPath(LevelResource.ROOT).resolve("mine").resolve("exports");
-		Files.createDirectories(folder);
-		Path file = folder.resolve(fileName);
-		Files.write(file, content);
-		return file.normalize();
 	}
 
 	/** One CSV row (RFC 4180): fields with commas, quotes or line breaks are quoted. */

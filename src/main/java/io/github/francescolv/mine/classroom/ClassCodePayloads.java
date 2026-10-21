@@ -1,11 +1,10 @@
 package io.github.francescolv.mine.classroom;
 
-import io.github.francescolv.mine.MineMod;
+import io.github.francescolv.mine.MinePayloads;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.Identifier;
 
 import java.util.List;
 
@@ -21,7 +20,7 @@ public final class ClassCodePayloads {
 
 	/** Type the class code; {@code wrong}: the last one was wrong. */
 	public record Ask(int triesLeft, boolean wrong) implements CustomPacketPayload {
-		public static final Type<Ask> ID = new Type<>(Identifier.fromNamespaceAndPath(MineMod.MOD_ID, "class_code_ask"));
+		public static final Type<Ask> ID = MinePayloads.type("class_code_ask");
 		public static final StreamCodec<io.netty.buffer.ByteBuf, Ask> CODEC = StreamCodec.composite(
 				ByteBufCodecs.VAR_INT, Ask::triesLeft, ByteBufCodecs.BOOL, Ask::wrong, Ask::new);
 
@@ -33,7 +32,7 @@ public final class ClassCodePayloads {
 
 	/** The symbols clicked, in order (indexes in {@link ClassCode#SYMBOLS}); none: the student gave up. */
 	public record Answer(List<Integer> symbols) implements CustomPacketPayload {
-		public static final Type<Answer> ID = new Type<>(Identifier.fromNamespaceAndPath(MineMod.MOD_ID, "class_code_answer"));
+		public static final Type<Answer> ID = MinePayloads.type("class_code_answer");
 		public static final StreamCodec<io.netty.buffer.ByteBuf, Answer> CODEC = StreamCodec.composite(
 				ByteBufCodecs.VAR_INT.apply(ByteBufCodecs.list(ClassCode.LENGTH)), Answer::symbols, Answer::new);
 
@@ -45,7 +44,7 @@ public final class ClassCodePayloads {
 
 	/** Shows the code to the teacher; {@code closesAt}: epoch milliseconds; {@code world}: "" for the main world. */
 	public record Show(List<Integer> symbols, long closesAt, String world) implements CustomPacketPayload {
-		public static final Type<Show> ID = new Type<>(Identifier.fromNamespaceAndPath(MineMod.MOD_ID, "class_code_show"));
+		public static final Type<Show> ID = MinePayloads.type("class_code_show");
 		public static final StreamCodec<io.netty.buffer.ByteBuf, Show> CODEC = StreamCodec.composite(
 				ByteBufCodecs.VAR_INT.apply(ByteBufCodecs.list(ClassCode.LENGTH)), Show::symbols,
 				ByteBufCodecs.VAR_LONG, Show::closesAt,

@@ -112,11 +112,6 @@ id mine >/dev/null 2>&1 || useradd --system --home-dir "$DIR" --shell /usr/sbin/
 mkdir -p "$DIR/backups"
 chown -R mine:mine "$DIR"
 
-# The first packages had the console as a systemd socket unit, which SELinux blocks on Fedora: remove it.
-if [ -f /etc/systemd/system/mine-server.socket ]; then
-	systemctl disable --now mine-server.socket >/dev/null 2>&1 || true
-	rm -f /etc/systemd/system/mine-server.socket
-fi
 for unit in mine-server.service mine-backup.service mine-backup.timer; do
 	sed -e "s|@DIR@|$DIR|g" -e "s|@JAVA@|$JAVA|g" -e "s|@MEMORY@|$MEMORY|g" \
 		"$HERE/systemd/$unit" > "/etc/systemd/system/$unit"

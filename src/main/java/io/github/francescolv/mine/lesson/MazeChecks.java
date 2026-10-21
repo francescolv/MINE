@@ -22,8 +22,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * Lesson checks with a maze, like Minecraft Education's "Maze Algorithms" and "Wall Follower".
@@ -33,7 +31,6 @@ import java.util.regex.Pattern;
  */
 final class MazeChecks {
 
-	private static final Pattern NUMBER = Pattern.compile("-?\\d+");
 
 	private MazeChecks() {
 	}
@@ -53,11 +50,6 @@ final class MazeChecks {
 		).apply(instance, Maze::new));
 
 		@Override
-		public Object start(AgentProgram program) {
-			return prepare(program.world(), program.startPos(), program.startFacing());
-		}
-
-		@Override
 		public Object prepare(ServerLevel world, BlockPos start, Direction ahead) {
 			return Built.build(world, start, ahead, width, depth, corridor);
 		}
@@ -65,7 +57,7 @@ final class MazeChecks {
 		@Override
 		public boolean passed(AgentProgram program, @Nullable Object memo) {
 			return memo instanceof Built maze && walkedIt(program, maze) && program.pos().equals(maze.exit())
-					&& (!saySteps || said(program).contains(program.steps()));
+					&& (!saySteps || Checks.numbersSaid(program).contains(program.steps()));
 		}
 
 		@Override
@@ -89,7 +81,7 @@ final class MazeChecks {
 						"Not yet: Byte stopped %s blocks from the gold. It has to stop right in front of it.",
 						program.pos().distManhattan(maze.exit()));
 			}
-			List<Integer> said = said(program);
+			List<Integer> said = Checks.numbersSaid(program);
 			if (saySteps && !said.isEmpty()) {
 				return Component.translatableWithFallback("mine.lesson.check.maze_count",
 						"Not yet: Byte took %s steps, but said %s. Count every step with a variable.",
@@ -108,22 +100,6 @@ final class MazeChecks {
 
 		private static boolean walkedIt(AgentProgram program, Built maze) {
 			return program.highest() == program.startPos().getY() && maze.untouched();
-		}
-
-		/** The numbers in what the Agent said, in order. */
-		private static List<Integer> said(AgentProgram program) {
-			List<Integer> numbers = new ArrayList<>();
-			for (String message : program.messages()) {
-				Matcher matcher = NUMBER.matcher(message);
-				while (matcher.find()) {
-					try {
-						numbers.add(Integer.parseInt(matcher.group()));
-					} catch (NumberFormatException e) {
-						// Too long to be a count of steps.
-					}
-				}
-			}
-			return numbers;
 		}
 	}
 
@@ -171,7 +147,7 @@ final class MazeChecks {
 
 		@Override
 		public boolean untouched() {
-			return course.blocks().keySet().stream().allMatch(course::intact);
+			return course.untouched();
 		}
 
 		@Override

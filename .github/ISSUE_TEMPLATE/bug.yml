@@ -20,7 +20,7 @@ body:
     id: versions
     attributes:
       label: Versions
-      placeholder: "MINE 0.1.0, Minecraft 26.3, Fabric Loader 0.19.x, Linux distro"
+      placeholder: "MINE 0.1.1, Minecraft 26.3, Fabric Loader 0.19.x, Linux distro"
     validations:
       required: true
   - type: textarea

@@ -81,9 +81,12 @@ final class BoardBlockScreen extends Screen {
 		rowsTop = top + headLines * LINE + 10;
 
 		int y = rowsTop;
+		// init() runs again when the window is resized: what was typed stays.
+		String typedKey = key == null ? block.key() : key.getValue();
+		String typedOwner = owner == null ? block.owner() : owner.getValue();
 		key = new EditBox(font, left + labels, y, fieldWidth, 20, Component.translatableWithFallback("mine.board_block.key", "Key"));
 		key.setMaxLength(32);
-		key.setValue(key.getValue().isEmpty() ? block.key() : key.getValue());
+		key.setValue(typedKey);
 		key.setEditable(block.canChange());
 		key.setHint(Component.literal(block.receiver() ? "pulsante_a" : "led"));
 		addRenderableWidget(key);
@@ -100,7 +103,7 @@ final class BoardBlockScreen extends Screen {
 		if (block.teacher()) {
 			owner = new EditBox(font, left + labels, y, fieldWidth, 20, Component.translatableWithFallback("mine.board_block.owner", "Board of"));
 			owner.setMaxLength(16);
-			owner.setValue(block.owner());
+			owner.setValue(typedOwner);
 			addRenderableWidget(owner);
 			y += ROW;
 		}
@@ -108,10 +111,7 @@ final class BoardBlockScreen extends Screen {
 		int buttons = height - 26;
 		int half = Math.min(150, wide / 2 - 4);
 		if (block.canChange()) {
-			addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, button -> save())
-					.bounds(width / 2 - half - 4, buttons, half, 20).build());
-			addRenderableWidget(Button.builder(CommonComponents.GUI_CANCEL, button -> onClose())
-					.bounds(width / 2 + 4, buttons, half, 20).build());
+			MineScreens.doneAndCancel(this::addRenderableWidget, width, buttons, half, button -> save(), button -> onClose());
 		} else {
 			addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, button -> onClose())
 					.bounds(width / 2 - half / 2, buttons, half, 20).build());
@@ -143,19 +143,19 @@ final class BoardBlockScreen extends Screen {
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
 		super.extractRenderState(context, mouseX, mouseY, delta);
-		int y = lines(context, title, top, 0xFFFFFFFF);
-		y = lines(context, help(), y, 0xFFA0A0A0);
-		lines(context, whose(), y, block.connected() ? 0xFF55FF55 : 0xFFFFAA00);
+		int y = lines(context, title, top, MineScreens.WHITE);
+		y = lines(context, help(), y, MineScreens.GRAY);
+		lines(context, whose(), y, block.connected() ? MineScreens.GREEN : 0xFFFFAA00);
 
 		int row = rowsTop + 6;
-		context.text(font, Component.translatableWithFallback("mine.board_block.key", "Key"), left, row, 0xFFFFFFFF);
+		context.text(font, Component.translatableWithFallback("mine.board_block.key", "Key"), left, row, MineScreens.WHITE);
 		row += ROW;
 		if (block.receiver()) {
-			context.text(font, Component.translatableWithFallback("mine.board_block.works", "Works"), left, row, 0xFFFFFFFF);
+			context.text(font, Component.translatableWithFallback("mine.board_block.works", "Works"), left, row, MineScreens.WHITE);
 			row += ROW;
 		}
 		if (owner != null) {
-			context.text(font, Component.translatableWithFallback("mine.board_block.owner", "Board of"), left, row, 0xFFFFFFFF);
+			context.text(font, Component.translatableWithFallback("mine.board_block.owner", "Board of"), left, row, MineScreens.WHITE);
 		}
 
 		String name = key.getValue().isBlank() ? "…" : key.getValue().strip();
@@ -163,13 +163,13 @@ final class BoardBlockScreen extends Screen {
 				? Component.translatableWithFallback("mine.board_block.receiver_example", "On the board: %s:1 switches it on, %s:0 off",
 						name, name)
 				: Component.translatableWithFallback("mine.board_block.sender_example", "The board reads %s:15 (powered) or %s:0", name, name);
-		y = lines(context, example, rowsEnd + 6, 0xFFA0A0A0);
+		y = lines(context, example, rowsEnd + 6, MineScreens.GRAY);
 		Component now = block.receiver()
 				? Component.translatableWithFallback("mine.board_block.power_now", "Redstone now: %s", block.power())
 				: Component.translatableWithFallback("mine.board_block.sent_now", "Last told the board: %s", block.power());
-		y = lines(context, now, y, 0xFFA0A0A0);
+		y = lines(context, now, y, MineScreens.GRAY);
 		if (!block.error().getString().isEmpty()) {
-			lines(context, block.error(), y + 4, 0xFFFF5555);
+			lines(context, block.error(), y + 4, MineScreens.RED);
 		} else if (!block.canChange()) {
 			lines(context, Component.translatableWithFallback("mine.board_block.not_yours",
 					"Only %s and the teachers can change it.", block.owner()), y + 4, 0xFFFFAA00);

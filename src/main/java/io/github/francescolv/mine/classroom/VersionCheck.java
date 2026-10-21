@@ -1,6 +1,7 @@
 package io.github.francescolv.mine.classroom;
 
 import io.github.francescolv.mine.MineMod;
+import io.github.francescolv.mine.MinePayloads;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerConfigurationConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerConfigurationNetworking;
@@ -9,7 +10,6 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.Identifier;
 import net.minecraft.server.network.ConfigurationTask;
 import org.jetbrains.annotations.Nullable;
 
@@ -28,7 +28,7 @@ public final class VersionCheck {
 
 	/** A MINE version: the server's (asking) or the student's (answering). */
 	public record Version(String version) implements CustomPacketPayload {
-		public static final Type<Version> ID = new Type<>(Identifier.fromNamespaceAndPath(MineMod.MOD_ID, "version"));
+		public static final Type<Version> ID = MinePayloads.type("version");
 		public static final StreamCodec<io.netty.buffer.ByteBuf, Version> CODEC = StreamCodec.composite(
 				ByteBufCodecs.stringUtf8(64), Version::version, Version::new);
 

@@ -26,6 +26,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.OptionalInt;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -35,6 +36,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class AgentManager {
 
 	public static final String CC_MOD_ID = "computercraft";
+	/** Whether CC: Tweaked is installed: without it, there are no Agents. */
+	public static final boolean CC_LOADED = FabricLoader.getInstance().isModLoaded(CC_MOD_ID);
 	private static final Identifier TURTLE_ID = Identifier.fromNamespaceAndPath(CC_MOD_ID, "turtle_normal");
 	/** How often, in ticks, we save the position of running Agents (5 seconds). */
 	private static final int SYNC_INTERVAL = 100;
@@ -73,7 +76,7 @@ public final class AgentManager {
 	}
 
 	public static void register() {
-		if (!FabricLoader.getInstance().isModLoaded(CC_MOD_ID)) {
+		if (!CC_LOADED) {
 			MineMod.LOGGER.warn("[MINE] CC: Tweaked not found: Byte module is disabled.");
 			return;
 		}
@@ -92,7 +95,7 @@ public final class AgentManager {
 	/** Creates the Agent in front of the student, removing the old one if there was one. */
 	public static Result spawn(ServerPlayer player) {
 		Block turtle = BuiltInRegistries.BLOCK.getValue(TURTLE_ID);
-		if (!FabricLoader.getInstance().isModLoaded(CC_MOD_ID) || turtle == Blocks.AIR) {
+		if (!CC_LOADED || turtle == Blocks.AIR) {
 			return Result.NO_CC;
 		}
 
@@ -136,7 +139,7 @@ public final class AgentManager {
 	/** Where the student's Agent is now, or {@code null} if they don't have one. */
 	@Nullable
 	public static Placement placement(ServerPlayer player) {
-		if (!FabricLoader.getInstance().isModLoaded(CC_MOD_ID)) {
+		if (!CC_LOADED) {
 			return null;
 		}
 		AgentTracker.Located located = locate(player.level().getServer(), AgentRegistry.get(player.level().getServer()), player.getUUID());
@@ -150,7 +153,7 @@ public final class AgentManager {
 
 	/** Brings the Agent back in front of the student, keeping its programs and inventory. */
 	public static Result recall(ServerPlayer player) {
-		if (!FabricLoader.getInstance().isModLoaded(CC_MOD_ID)) {
+		if (!CC_LOADED) {
 			return Result.NO_CC;
 		}
 
@@ -190,25 +193,16 @@ public final class AgentManager {
 
 	/** Starts one of the Agent's programs, as if the student had typed it in its terminal. */
 	public static Result run(ServerPlayer player, String program) {
-		if (!FabricLoader.getInstance().isModLoaded(CC_MOD_ID)) {
+		if (!CC_LOADED) {
 			return Result.NO_CC;
 		}
 
-		AgentRegistry registry = AgentRegistry.get(player.level().getServer());
-		if (locate(player.level().getServer(), registry, player.getUUID()) == null) {
+		OptionalInt computer = computer(player);
+		if (computer.isEmpty()) {
 			return Result.NO_AGENT;
 		}
-		int id = registry.get(player.getUUID()).computerId();
+		int id = computer.getAsInt();
 		return id < 0 ? Result.OFF : AgentTracker.run(id, program);
-	}
-
-	/**
-	 * Sends {@code program} to the student's Agent, as the file {@code name} (e.g. from MINE's
-	 * block editor), and starts it if {@code run}. The Agent writes it on its disk when its shell
-	 * is ready for a command: now, or after the program it is running.
-	 */
-	public static Result send(ServerPlayer player, String name, String program, boolean run) {
-		return send(player, name, program, run ? Delivery.RUN : Delivery.OFFER);
 	}
 
 	/** What to do with a program sent to the Agent. */
@@ -221,16 +215,21 @@ public final class AgentManager {
 		HOLD
 	}
 
+	/**
+	 * Sends {@code program} to the student's Agent, as the file {@code name} (e.g. from MINE's
+	 * block editor). The Agent writes it on its disk when its shell is ready for a command: now,
+	 * or after the program it is running.
+	 */
 	public static Result send(ServerPlayer player, String name, String program, Delivery delivery) {
-		if (!FabricLoader.getInstance().isModLoaded(CC_MOD_ID)) {
+		if (!CC_LOADED) {
 			return Result.NO_CC;
 		}
-		AgentRegistry registry = AgentRegistry.get(player.level().getServer());
-		if (locate(player.level().getServer(), registry, player.getUUID()) == null) {
+		OptionalInt computer = computer(player);
+		if (computer.isEmpty()) {
 			return Result.NO_AGENT;
 		}
 		INBOX.computeIfAbsent(player.getUUID(), uuid -> new ConcurrentHashMap<>()).put(name, program);
-		int id = registry.get(player.getUUID()).computerId();
+		int id = computer.getAsInt();
 		if (delivery == Delivery.RUN) {
 			// The shell picks up what was sent before running it.
 			return runOrStart(player, name);
@@ -239,14 +238,10 @@ public final class AgentManager {
 			// Off: turned on, its shell picks up what was sent when it is ready.
 			return powerOn(player) ? Result.SENT : Result.OFF;
 		}
-		return switch (delivery) {
-			case RUN -> throw new IllegalStateException("started above");
-			case OFFER -> {
-				AgentTracker.offerKit(id);
-				yield Result.SENT;
-			}
-			case HOLD -> Result.SENT;
-		};
+		if (delivery == Delivery.OFFER) {
+			AgentTracker.offerKit(id);
+		}
+		return Result.SENT;
 	}
 
 	/**
@@ -255,7 +250,7 @@ public final class AgentManager {
 	 * this: if they change, MINE says to open the Agent instead.
 	 */
 	public static boolean powerOn(ServerPlayer player) {
-		if (!FabricLoader.getInstance().isModLoaded(CC_MOD_ID)) {
+		if (!CC_LOADED) {
 			return false;
 		}
 		AgentTracker.Located agent = locate(player.level().getServer(), AgentRegistry.get(player.level().getServer()), player.getUUID());
@@ -332,7 +327,7 @@ public final class AgentManager {
 	 * it is on. Called on the server thread.
 	 */
 	public static void deviceEvent(MinecraftServer server, UUID student, String key, Object value) {
-		if (!FabricLoader.getInstance().isModLoaded(CC_MOD_ID)) {
+		if (!CC_LOADED) {
 			return;
 		}
 		AgentRegistry.Entry entry = AgentRegistry.get(server).get(student);
@@ -383,14 +378,10 @@ public final class AgentManager {
 	 * {@link AgentKit} now. Otherwise it picks it up the next time its shell is ready.
 	 */
 	public static void offerKit(ServerPlayer player) {
-		if (!FabricLoader.getInstance().isModLoaded(CC_MOD_ID)) {
+		if (!CC_LOADED) {
 			return;
 		}
-		AgentRegistry registry = AgentRegistry.get(player.level().getServer());
-		if (locate(player.level().getServer(), registry, player.getUUID()) == null) {
-			return;
-		}
-		int id = registry.get(player.getUUID()).computerId();
+		int id = computer(player).orElse(-1);
 		if (id >= 0) {
 			AgentTracker.offerKit(id);
 		}
@@ -426,6 +417,15 @@ public final class AgentManager {
 	 * (broken, or never created). Updates the registry along the way.
 	 */
 	@Nullable
+	/** The computer of the student's Agent ({@code -1}: never turned on), or empty if they have none. */
+	private static OptionalInt computer(ServerPlayer player) {
+		AgentRegistry registry = AgentRegistry.get(player.level().getServer());
+		if (locate(player.level().getServer(), registry, player.getUUID()) == null) {
+			return OptionalInt.empty();
+		}
+		return OptionalInt.of(registry.get(player.getUUID()).computerId());
+	}
+
 	private static AgentTracker.Located locate(MinecraftServer server, AgentRegistry registry, UUID player) {
 		AgentRegistry.Entry entry = registry.get(player);
 		if (entry == null) {

@@ -51,9 +51,7 @@ final class TreasureChecks {
 		@Override
 		public Object start(AgentProgram program) {
 			Object memo = prepare(program.world(), program.startPos(), program.startFacing());
-			if (memo instanceof Buried buried) {
-				program.setChallenge(buried.numbers().toArray());
-			}
+			reuse(program, memo);
 			return memo;
 		}
 

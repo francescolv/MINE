@@ -28,6 +28,8 @@ from machine import Pin
 _EDITOR_PORT = 25580
 _ANNOUNCE_PORT = 4445
 _CONFIG = "mine.txt"
+# Lines sent closer together than this go to the server together, in one exchange.
+_GAP_MS = 150
 
 
 def _read_config():
@@ -50,6 +52,7 @@ _server = None
 _outbox = []
 _inbox = []
 _said = None
+_last = None
 
 
 def _say(english, italian):
@@ -153,11 +156,17 @@ def _value(text):
         return text
 
 
+def _due():
+    """Whether it's time for another exchange: not sooner than _GAP_MS after the last one."""
+    return _last is None or time.ticks_diff(time.ticks_ms(), _last) >= _GAP_MS
+
+
 def _exchange():
     """Gives the server the lines to send and takes the ones for the board. False if it can't now."""
-    global _server, _said
+    global _server, _said, _last
     if not _wifi() or not _find_server():
         return False
+    _last = time.ticks_ms()
     values = _outbox[:]
     try:
         status, answer = _post("/api/device", {"values": values})
@@ -190,15 +199,17 @@ def connect():
 
 
 def send(key, value):
-    """Sends key:value, as print("key:value") over a cable."""
+    """Sends key:value, as print("key:value") over a cable. Lines sent very close together leave
+    together, with the next send() or receive()."""
     _outbox.append("%s:%s" % (key, value))
     del _outbox[:-40]
-    _exchange()
+    if _due():
+        _exchange()
 
 
 def receive():
     """The lines (key, value) sent to the board since the last time: ask often, at least every few seconds."""
-    if not _inbox:
+    if not _inbox and (_due() or _outbox):
         _exchange()
     lines = _inbox[:]
     del _inbox[:]

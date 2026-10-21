@@ -9,7 +9,9 @@ import net.minecraft.server.MinecraftServer;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -55,8 +57,20 @@ public record NpcCondition(Kind kind, String lesson, int fromStep, int toStep) {
 	private static final Pattern DONE = Pattern.compile("@done\\s+([a-z0-9_./-]+)", Pattern.CASE_INSENSITIVE);
 	private static final Pattern NONE = Pattern.compile("@lesson\\s+none", Pattern.CASE_INSENSITIVE);
 
+	/** Pages already split, by their text: a dialogue is read again at every click on its NPC. */
+	private static final Map<String, Page> PARSED = java.util.Collections.synchronizedMap(new LinkedHashMap<>(64, 0.75f, true) {
+		@Override
+		protected boolean removeEldestEntry(Map.Entry<String, Page> eldest) {
+			return size() > 512;
+		}
+	});
+
 	/** Splits a page into its condition lines (the first ones starting with {@code @}) and the rest. */
 	public static Page parse(String page) {
+		return PARSED.computeIfAbsent(page, NpcCondition::split);
+	}
+
+	private static Page split(String page) {
 		List<NpcCondition> conditions = new ArrayList<>();
 		List<String> errors = new ArrayList<>();
 		String[] lines = page.split("\n", -1);

@@ -1,5 +1,6 @@
 package io.github.francescolv.mine.portfolio;
 
+import io.github.francescolv.mine.Exports;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
@@ -78,10 +79,6 @@ public final class PortfolioCommand {
 	private static int giveCamera(CommandSourceStack source, Collection<ServerPlayer> students) {
 		for (ServerPlayer student : students) {
 			student.addItem(Portfolios.camera());
-			if (!Portfolios.hasMine(student)) {
-				source.sendFailure(Component.translatableWithFallback("mine.camera.no_mine",
-						"%s doesn't have MINE in their game: the camera won't work for them.", student.getDisplayName()));
-			}
 		}
 		source.sendSuccess(() -> Component.translatableWithFallback("mine.camera.given",
 				"Camera given: right-click with it to take a photo for the portfolio.").withStyle(ChatFormatting.GREEN), students.size() > 1);
@@ -130,7 +127,7 @@ public final class PortfolioCommand {
 				fileName = PortfolioExport.fileName(player.getName().getString());
 				zip = PortfolioExport.of(source.getServer(), own, language);
 			}
-			Path file = PortfolioExport.save(source.getServer(), fileName, zip);
+			Path file = Exports.save(source.getServer(), fileName, zip);
 			MineMod.LOGGER.info("[MINE] {} exported portfolios to {}", player.getName().getString(), file);
 			if (ExportPayload.canSend(player, zip.length)) {
 				ExportPayload.send(player, fileName, zip);

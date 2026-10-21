@@ -1,18 +1,14 @@
 package io.github.francescolv.mine.gametest;
 
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import io.github.francescolv.mine.lesson.LessonProgress;
 import io.github.francescolv.mine.portfolio.PortfolioExport;
 import io.github.francescolv.mine.portfolio.PortfolioPayloads;
 import io.github.francescolv.mine.portfolio.PortfolioStore;
 import io.github.francescolv.mine.portfolio.Portfolios;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
-import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.permissions.LevelBasedPermissionSet;
 import net.minecraft.server.permissions.PermissionSet;
 
 import java.io.ByteArrayInputStream;
@@ -34,17 +30,6 @@ public class PortfolioGameTest {
 	/** The smallest thing that looks like a JPEG to the server: start and end markers. */
 	private static final byte[] JPEG = { (byte) 0xFF, (byte) 0xD8, (byte) 0xFF, 0x00, 0x42, (byte) 0xFF, (byte) 0xD9 };
 
-	private static ServerPlayer player(GameTestHelper ctx, boolean teacher) {
-		ServerPlayer player = ctx.makeMockServerPlayerInLevel();
-		BlockPos feet = ctx.absolutePos(new BlockPos(3, 1, 1));
-		player.snapTo(feet.getX() + 0.5, feet.getY(), feet.getZ() + 0.5, 0.0f, 0.0f);
-		if (teacher) {
-			ctx.getLevel().getServer().getPlayerList().getOps()
-					.add(new net.minecraft.server.players.ServerOpListEntry(player.nameAndId(), LevelBasedPermissionSet.OWNER, false));
-		}
-		return player;
-	}
-
 	private static void act(ServerPlayer player, PortfolioPayloads.Action action, String album, String entry, String text) {
 		Portfolios.request(player, new PortfolioPayloads.Request(action, album, entry, text));
 	}
@@ -54,8 +39,8 @@ public class PortfolioGameTest {
 	public void theCamera(GameTestHelper ctx) {
 		ctx.assertTrue(Portfolios.isCamera(Portfolios.camera()), "A camera");
 		ctx.assertTrue(!Portfolios.isCamera(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.SPYGLASS)), "A plain spyglass isn't");
-		ServerPlayer student = player(ctx, false);
-		execute(ctx, student.createCommandSourceStack().withPermission(PermissionSet.NO_PERMISSIONS), "mine camera", true);
+		ServerPlayer student = GameTests.player(ctx, false);
+		GameTests.execute(ctx, student.createCommandSourceStack().withPermission(PermissionSet.NO_PERMISSIONS), "mine camera", true);
 		boolean got = false;
 		for (int slot = 0; slot < student.getInventory().getContainerSize(); slot++) {
 			got |= Portfolios.isCamera(student.getInventory().getItem(slot));
@@ -71,7 +56,7 @@ public class PortfolioGameTest {
 	@GameTest
 	public void photosAndNotes(GameTestHelper ctx) throws IOException {
 		MinecraftServer server = ctx.getLevel().getServer();
-		ServerPlayer student = player(ctx, false);
+		ServerPlayer student = GameTests.player(ctx, false);
 		LessonProgress.get(server).put(student.getUUID(), new LessonProgress.Entry("loops", 1, 0, System.currentTimeMillis(), 0));
 
 		ctx.assertTrue(Portfolios.addPhoto(student, "not a photo".getBytes(StandardCharsets.UTF_8)) == null, "Not a JPEG");
@@ -107,14 +92,14 @@ public class PortfolioGameTest {
 	@GameTest
 	public void theClassGallery(GameTestHelper ctx) {
 		MinecraftServer server = ctx.getLevel().getServer();
-		ServerPlayer teacher = player(ctx, true);
-		ServerPlayer alex = player(ctx, false);
-		ServerPlayer sam = player(ctx, false);
+		ServerPlayer teacher = GameTests.player(ctx, true);
+		ServerPlayer alex = GameTests.player(ctx, false);
+		ServerPlayer sam = GameTests.player(ctx, false);
 		String name = "test_" + UUID.randomUUID().toString().substring(0, 6);
 
-		execute(ctx, alex.createCommandSourceStack().withPermission(PermissionSet.NO_PERMISSIONS), "mine gallery create " + name, false);
-		execute(ctx, teacher.createCommandSourceStack(), "mine gallery create bad/name", false);
-		execute(ctx, teacher.createCommandSourceStack(), "mine gallery create " + name, true);
+		GameTests.execute(ctx, alex.createCommandSourceStack().withPermission(PermissionSet.NO_PERMISSIONS), "mine gallery create " + name, false);
+		GameTests.execute(ctx, teacher.createCommandSourceStack(), "mine gallery create bad/name", false);
+		GameTests.execute(ctx, teacher.createCommandSourceStack(), "mine gallery create " + name, true);
 		PortfolioStore store = PortfolioStore.get(server);
 		PortfolioStore.Album gallery = store.gallery(name);
 		ctx.assertTrue(gallery != null && store.currentGallery() == gallery, "Created, and the current one");
@@ -147,8 +132,8 @@ public class PortfolioGameTest {
 		ctx.assertTrue(gallery.entries().size() == 1, "The teacher deletes any entry");
 		ctx.assertTrue(store.album(alexAlbum).entries().size() == 1, "Alex's own photo stays in their portfolio");
 
-		execute(ctx, alex.createCommandSourceStack().withPermission(PermissionSet.NO_PERMISSIONS), "mine gallery list", true);
-		execute(ctx, teacher.createCommandSourceStack(), "mine gallery remove " + name, true);
+		GameTests.execute(ctx, alex.createCommandSourceStack().withPermission(PermissionSet.NO_PERMISSIONS), "mine gallery list", true);
+		GameTests.execute(ctx, teacher.createCommandSourceStack(), "mine gallery remove " + name, true);
 		ctx.assertTrue(store.gallery(name) == null && !Files.exists(PortfolioStore.folder(server, gallery.key())), "Removed with its photos");
 		ctx.succeed();
 	}
@@ -157,8 +142,8 @@ public class PortfolioGameTest {
 	@GameTest
 	public void theExport(GameTestHelper ctx) throws IOException {
 		MinecraftServer server = ctx.getLevel().getServer();
-		ServerPlayer teacher = player(ctx, true);
-		ServerPlayer student = player(ctx, false);
+		ServerPlayer teacher = GameTests.player(ctx, true);
+		ServerPlayer student = GameTests.player(ctx, false);
 		PortfolioStore.Entry photo = Portfolios.addPhoto(student, JPEG);
 		act(student, PortfolioPayloads.Action.CAPTION, "", photo.id(), "A <tower> & more");
 		String name = "export_" + UUID.randomUUID().toString().substring(0, 6);
@@ -175,9 +160,9 @@ public class PortfolioGameTest {
 		ctx.assertTrue(files.keySet().stream().anyMatch(f -> f.startsWith("photos/") && f.endsWith(photo.photo())), "The photo is in the zip");
 		ctx.assertTrue(files.containsKey("galleries/" + name + ".html"), "The gallery's page");
 
-		execute(ctx, teacher.createCommandSourceStack(), "mine portfolio export", true);
+		GameTests.execute(ctx, teacher.createCommandSourceStack(), "mine portfolio export", true);
 		// Mock players have no MINE in their game: the window can't open.
-		execute(ctx, student.createCommandSourceStack().withPermission(PermissionSet.NO_PERMISSIONS), "mine portfolio", false);
+		GameTests.execute(ctx, student.createCommandSourceStack().withPermission(PermissionSet.NO_PERMISSIONS), "mine portfolio", false);
 		PortfolioStore.get(server).removeGallery(server, name);
 		ctx.succeed();
 	}
@@ -190,16 +175,5 @@ public class PortfolioGameTest {
 			}
 		}
 		return files;
-	}
-
-	private static void execute(GameTestHelper ctx, CommandSourceStack source, String command, boolean succeeds) {
-		int result;
-		try {
-			result = ctx.getLevel().getServer().getCommands().getDispatcher().execute(command, source);
-		} catch (CommandSyntaxException e) {
-			io.github.francescolv.mine.MineMod.LOGGER.info("[MINE test] /{} failed: {}", command, e.getMessage());
-			result = 0;
-		}
-		ctx.assertTrue((result > 0) == succeeds, "/" + command + (succeeds ? " should succeed" : " should fail"));
 	}
 }

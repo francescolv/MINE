@@ -4,8 +4,7 @@
 
 Boards show large text in the world, like the boards of Minecraft Education: the title of an
 activity, instructions, the rules of the lab, a piece of code to remember. Like NPCs, you write
-them **in the game**, in a book and quill. Students don't need anything installed: a board is
-made of Minecraft's own text displays.
+them **in the game**, in a book and quill. A board is made of Minecraft's own text displays.
 
 ## Creating a board
 
@@ -31,7 +30,7 @@ Ask before using TNT.
 Have fun!
 ```
 
-It works the same in a **book and quill**, also in a game without MINE: write the text in the
+It works the same in a **book and quill**: write the text in the
 book (hold it and right-click in the air to open it), then right-click the **middle** of the board
 holding it. To get the board's text in a book, **sneak and right-click it with an empty hand**.
 

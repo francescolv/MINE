@@ -1,7 +1,5 @@
 package io.github.francescolv.mine.npc;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
@@ -9,16 +7,16 @@ import com.mojang.serialization.JsonOps;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.github.francescolv.mine.DataFormat;
 import io.github.francescolv.mine.MineMod;
+import io.github.francescolv.mine.board.BoardManager;
 import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
 import net.fabricmc.fabric.api.resource.SimpleSynchronousResourceReloadListener;
 import net.minecraft.resources.FileToIdConverter;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.PackType;
-import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.Reader;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -68,7 +66,7 @@ public final class Templates {
 
 		static Codec<BoardTemplate> codec(Identifier id) {
 			return RecordCodecBuilder.create(instance -> instance.group(
-					Codec.floatRange(0.5f, 8).optionalFieldOf("size", 2f).forGetter(BoardTemplate::size),
+					Codec.floatRange(BoardManager.MIN_SIZE, BoardManager.MAX_SIZE).optionalFieldOf("size", BoardManager.DEFAULT_SIZE).forGetter(BoardTemplate::size),
 					BY_LANGUAGE.fieldOf("text").forGetter(BoardTemplate::text)
 			).apply(instance, (size, text) -> new BoardTemplate(id, size, text)));
 		}
@@ -133,23 +131,10 @@ public final class Templates {
 	private static <T> Map<Identifier, T> load(ResourceManager manager, FileToIdConverter finder,
 			Function<Identifier, Codec<T>> codec, String what) {
 		Map<Identifier, T> loaded = new TreeMap<>();
-		for (Map.Entry<Identifier, Resource> file : finder.listMatchingResources(manager).entrySet()) {
-			Identifier id = finder.fileToId(file.getKey());
-			try (Reader reader = file.getValue().openAsReader()) {
-				JsonElement json = JsonParser.parseReader(reader);
-				String tooNew = DataFormat.tooNew(json);
-				if (tooNew != null) {
-					MineMod.LOGGER.warn("[MINE] Skipping {} {}: {}", what, id, tooNew);
-					continue;
-				}
-				codec.apply(id).parse(JsonOps.INSTANCE, json)
-						.ifSuccess(template -> loaded.put(id, template))
-						.ifError(error -> MineMod.LOGGER.warn("[MINE] Skipping {} {}: {}", what, id, error.message()));
-			} catch (Exception e) {
-				MineMod.LOGGER.warn("[MINE] Skipping {} {}: {}", what, id, e.getMessage());
-			}
-		}
+		DataFormat.loadJson(manager, finder, what, (id, json) -> codec.apply(id).parse(JsonOps.INSTANCE, json)
+				.ifSuccess(template -> loaded.put(id, template))
+				.ifError(error -> MineMod.LOGGER.warn("[MINE] Skipping {} {}: {}", what, id, error.message())));
 		MineMod.LOGGER.info("[MINE] Loaded {} {}s: {}", loaded.size(), what, loaded.keySet());
-		return Map.copyOf(loaded);
+		return Collections.unmodifiableMap(loaded);
 	}
 }

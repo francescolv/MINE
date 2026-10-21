@@ -71,11 +71,6 @@ final class ConnectedChecks {
 				: Component.literal(value.toString())).toList(), Component.literal(", "));
 	}
 
-	private static Component onOff(boolean on) {
-		return on ? Component.translatableWithFallback("mine.lesson.check.on", "on")
-				: Component.translatableWithFallback("mine.lesson.check.off", "off");
-	}
-
 	// Lesson 12, the connected greenhouse.
 
 	/**
@@ -159,24 +154,14 @@ final class ConnectedChecks {
 	}
 
 	/** Tested live: the board must get {@code allarme:1} when the temperature is above {@code threshold}, else {@code allarme:0}. */
-	static final class Alarm extends LiveTest.Check {
+	record Alarm(int threshold) implements LiveTest.Check {
 
 		static final MapCodec<Alarm> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
 				Codec.intRange(0, 100).fieldOf("threshold").forGetter(Alarm::threshold)
 		).apply(instance, Alarm::new));
 
-		private final int threshold;
-
-		Alarm(int threshold) {
-			this.threshold = threshold;
-		}
-
-		int threshold() {
-			return threshold;
-		}
-
 		@Override
-		Object test(AgentProgram program) {
+		public Object test(AgentProgram program) {
 			RandomSource random = program.world().getRandom();
 			UUID student = program.owner();
 			// Below and above, twice, and right on the threshold: "above" doesn't take it in.
@@ -195,24 +180,14 @@ final class ConnectedChecks {
 	}
 
 	/** Tested live: after every {@code every} temperatures, the board gets their average as {@code media}. */
-	static final class Report extends LiveTest.Check {
+	record Report(int every) implements LiveTest.Check {
 
 		static final MapCodec<Report> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
 				Codec.intRange(2, 10).fieldOf("every").forGetter(Report::every)
 		).apply(instance, Report::new));
 
-		private final int every;
-
-		Report(int every) {
-			this.every = every;
-		}
-
-		int every() {
-			return every;
-		}
-
 		@Override
-		Object test(AgentProgram program) {
+		public Object test(AgentProgram program) {
 			RandomSource random = program.world().getRandom();
 			UUID student = program.owner();
 			LiveTest test = new LiveTest();
@@ -249,7 +224,7 @@ final class ConnectedChecks {
 	 * plain threshold, {@code off} is {@code on - 1}). With {@code button}, {@code pulsante_a:1}
 	 * switches manual mode on and off: in manual mode the fan is always on.
 	 */
-	static final class Fan extends LiveTest.Check {
+	record Fan(int on, int off, boolean button) implements LiveTest.Check {
 
 		static final MapCodec<Fan> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
 				Codec.intRange(-50, 100).fieldOf("on").forGetter(Fan::on),
@@ -257,54 +232,22 @@ final class ConnectedChecks {
 				Codec.BOOL.optionalFieldOf("button", false).forGetter(Fan::button)
 		).apply(instance, Fan::new));
 
-		private final int on;
-		private final int off;
-		private final boolean button;
-
-		Fan(int on, int off, boolean button) {
-			this.on = on;
-			this.off = off;
-			this.button = button;
-		}
-
-		int on() {
-			return on;
-		}
-
-		int off() {
-			return off;
-		}
-
-		boolean button() {
-			return button;
-		}
-
 		@Override
-		Object test(AgentProgram program) {
+		public Object test(AgentProgram program) {
 			Object built = BoardChecks.Scene.build(program.world(), program.startPos(), program.startFacing(), BoardChecks.Part.LAMP);
 			if (!(built instanceof BoardChecks.Scene scene)) {
-				return Component.translatableWithFallback("mine.lesson.check.board_room",
-						"Not yet: MINE needs room around Byte, and solid ground in front and on its left. Move it to an open space with /mine byte recall.");
+				return BoardChecks.noRoom();
 			}
 			// A temperature (a number) or the button (null): what happens, in order.
-			List<Integer> events = new ArrayList<>();
-			if (!button) {
-				events.addAll(List.of(off - 3, on + 2, off, on, on - 1 == off ? off - 5 : off - 1));
-			} else {
-				events.addAll(List.of(off - 2));
-				events.add(null);
-				events.add(off - 1);
-				events.add(null);
-				events.add(on + 2);
-				events.add(null);
-				events.add(off - 4);
-				events.add(null);
-			}
-			if (off < on - 1 && !button) {
+			List<Integer> events;
+			if (button) {
+				events = java.util.Arrays.asList(off - 2, null, off - 1, null, on + 2, null, off - 4, null);
+			} else if (off < on - 1) {
 				// Hysteresis: in between, it stays as it was, coming from below and from above.
-				events.clear();
 				int middle = (on + off) / 2;
-				events.addAll(List.of(off - 2, middle, on + 1, middle, off + 1 == on ? middle : off + 1, off - 1, middle));
+				events = List.of(off - 2, middle, on + 1, middle, off + 1 == on ? middle : off + 1, off - 1, middle);
+			} else {
+				events = List.of(off - 3, on + 2, off, on, on - 1 == off ? off - 5 : off - 1);
 			}
 			LiveTest test = new LiveTest(scene);
 			List<Component> history = new ArrayList<>();
@@ -322,18 +265,12 @@ final class ConnectedChecks {
 					state[0] = false;
 				}
 				boolean expected = state[0] || state[1];
-				List<Component> sofar = List.copyOf(history.isEmpty() ? List.of(label) : append(history, label));
 				history.add(label);
+				List<Component> sofar = List.copyOf(history);
 				test.act(act).expect(() -> scene.lit() == expected, () -> Component.translatableWithFallback("mine.lesson.check.control_fan",
-						"Not yet: after %s the fan should be %s, and it was %s.", list(sofar), onOff(expected), onOff(scene.lit())));
+						"Not yet: after %s the fan should be %s, and it was %s.", list(sofar), Checks.onOff(expected), Checks.onOff(scene.lit())));
 			}
 			return test;
-		}
-
-		private static List<Component> append(List<Component> list, Component last) {
-			List<Component> copy = new ArrayList<>(list);
-			copy.add(last);
-			return copy;
 		}
 	}
 
@@ -346,7 +283,7 @@ final class ConnectedChecks {
 	 * trains are counted (it opens when all have passed) and the board's LED ({@code led}) shows
 	 * when it is closed.
 	 */
-	static final class Crossing extends LiveTest.Check {
+	record Crossing(boolean reopen, boolean count) implements LiveTest.Check {
 
 		static final MapCodec<Crossing> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
 				Codec.BOOL.optionalFieldOf("reopen", false).forGetter(Crossing::reopen),
@@ -355,29 +292,12 @@ final class ConnectedChecks {
 
 		private enum Event { TRAIN, PASSED, LEVER_BACK }
 
-		private final boolean reopen;
-		private final boolean count;
-
-		Crossing(boolean reopen, boolean count) {
-			this.reopen = reopen;
-			this.count = count;
-		}
-
-		boolean reopen() {
-			return reopen;
-		}
-
-		boolean count() {
-			return count;
-		}
-
 		@Override
-		Object test(AgentProgram program) {
+		public Object test(AgentProgram program) {
 			Object built = BoardChecks.Scene.build(program.world(), program.startPos(), program.startFacing(),
 					BoardChecks.Part.DOOR, BoardChecks.Part.LAMP, BoardChecks.Part.HEART);
 			if (!(built instanceof BoardChecks.Scene scene)) {
-				return Component.translatableWithFallback("mine.lesson.check.board_room",
-						"Not yet: MINE needs room around Byte, and solid ground in front and on its left. Move it to an open space with /mine byte recall.");
+				return BoardChecks.noRoom();
 			}
 			UUID student = program.owner();
 			List<Event> events = new ArrayList<>();
@@ -419,7 +339,7 @@ final class ConnectedChecks {
 						: Component.translatableWithFallback("mine.lesson.check.open", "open");
 				test.act(act).expect(() -> scene.open() != closed && scene.lit() == closed,
 						() -> Component.translatableWithFallback("mine.lesson.check.crossing",
-								"Not yet: after %s the barrier should be %s and the light %s.", list(sofar), barrier, onOff(closed)));
+								"Not yet: after %s the barrier should be %s and the light %s.", list(sofar), barrier, Checks.onOff(closed)));
 				if (count) {
 					test.expect(() -> BoardChecks.on(Devices.lastSent(student, LED)) == closed,
 							() -> Component.translatableWithFallback("mine.lesson.check.crossing_led",
@@ -435,7 +355,7 @@ final class ConnectedChecks {
 			if (memo instanceof LiveTest test && test.scene() instanceof BoardChecks.Scene scene) {
 				scene.pull(false);
 			}
-			super.ended(program, memo, passed);
+			LiveTest.Check.super.ended(program, memo, passed);
 		}
 	}
 }

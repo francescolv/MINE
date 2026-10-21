@@ -249,7 +249,8 @@ while True:
 - The board talks to Byte only while the student is in the game: until then it waits, by itself.
 - Call `mine.receive()` often, at least every few seconds: that's when the board asks the server
   for its lines. If it's silent for 10 seconds, MINE takes it as disconnected (and connects it
-  again at the next ask).
+  again at the next ask). Lines sent very close together (less than 0.15 seconds apart) leave
+  together, with the next `mine.send()` or `mine.receive()`.
 - `/mine device` says in chat that the board is connected over Wi-Fi, and which program it runs.
 - Before buying many, try one: some school Wi-Fi networks don't let devices talk to each other
   (client isolation). If the board can't find the server even with `server=`, ask the network

@@ -2,7 +2,7 @@ package io.github.francescolv.mine.blocks;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import io.github.francescolv.mine.MineMod;
+import io.github.francescolv.mine.MinePayloads;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.ChatFormatting;
@@ -15,7 +15,6 @@ import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 
 /**
@@ -30,7 +29,7 @@ public final class BlocksCommand {
 
 	/** Open the editor at this port, with this personal code. */
 	public record Open(int port, String code) implements CustomPacketPayload {
-		public static final Type<Open> ID = new Type<>(Identifier.fromNamespaceAndPath(MineMod.MOD_ID, "blocks_open"));
+		public static final Type<Open> ID = MinePayloads.type("blocks_open");
 		public static final StreamCodec<RegistryFriendlyByteBuf, Open> CODEC = StreamCodec.composite(
 				ByteBufCodecs.VAR_INT, Open::port, ByteBufCodecs.stringUtf8(64), Open::code, Open::new);
 
@@ -42,7 +41,7 @@ public final class BlocksCommand {
 
 	/** Start {@code name} when the student is back in the game (they pressed Run in the browser). */
 	public record RunWhenBack(String name) implements CustomPacketPayload {
-		public static final Type<RunWhenBack> ID = new Type<>(Identifier.fromNamespaceAndPath(MineMod.MOD_ID, "blocks_run_when_back"));
+		public static final Type<RunWhenBack> ID = MinePayloads.type("blocks_run_when_back");
 		public static final StreamCodec<RegistryFriendlyByteBuf, RunWhenBack> CODEC = StreamCodec.composite(
 				ByteBufCodecs.stringUtf8(64), RunWhenBack::name, RunWhenBack::new);
 
@@ -54,7 +53,7 @@ public final class BlocksCommand {
 
 	/** The student is back in the game: start {@code name} (empty: the last program sent from the blocks). */
 	public record Go(String name) implements CustomPacketPayload {
-		public static final Type<Go> ID = new Type<>(Identifier.fromNamespaceAndPath(MineMod.MOD_ID, "blocks_go"));
+		public static final Type<Go> ID = MinePayloads.type("blocks_go");
 		public static final StreamCodec<RegistryFriendlyByteBuf, Go> CODEC = StreamCodec.composite(
 				ByteBufCodecs.stringUtf8(64), Go::name, Go::new);
 
@@ -97,11 +96,6 @@ public final class BlocksCommand {
 		if (port < 0) {
 			source.sendFailure(Component.translatableWithFallback("mine.blocks.not_running",
 					"The block editor runs on a class server (MINE's server package), not in a single-player world."));
-			return 0;
-		}
-		if (!ServerPlayNetworking.canSend(player, Open.ID)) {
-			source.sendFailure(Component.translatableWithFallback("mine.blocks.needs_mine",
-					"The block editor needs MINE in your game (the MINE modpack)."));
 			return 0;
 		}
 		ServerPlayNetworking.send(player, new Open(port, BlockSessions.codeFor(player.getUUID())));

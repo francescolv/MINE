@@ -1,6 +1,5 @@
 package io.github.francescolv.mine;
 
-import com.mojang.blaze3d.platform.NativeImage;
 import io.github.francescolv.mine.portfolio.PortfolioPayloads;
 import io.github.francescolv.mine.portfolio.Portfolios;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -92,16 +91,8 @@ final class ClientCamera {
 		Screenshot.takeScreenshot(client.gameRenderer.mainRenderTarget(), image -> {
 			showHud(client);
 			try (image) {
-				int width = image.getWidth();
-				int height = image.getHeight();
-				int[] pixels = new int[width * height];
-				for (int y = 0; y < height; y++) {
-					for (int x = 0; x < width; x++) {
-						// NativeImage gives ARGB; the JPEG needs RGB.
-						pixels[y * width + x] = image.getPixel(x, y) & 0xFFFFFF;
-					}
-				}
-				saved(client, pixels, width, height);
+				// ARGB: the JPEG's RGB image leaves the alpha out by itself.
+				saved(client, image.getPixels(), image.getWidth(), image.getHeight());
 			}
 		});
 	}

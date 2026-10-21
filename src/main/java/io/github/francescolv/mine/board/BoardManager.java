@@ -4,42 +4,33 @@ import com.mojang.math.Transformation;
 import com.mojang.serialization.Codec;
 import io.github.francescolv.mine.MineMod;
 import io.github.francescolv.mine.npc.NpcManager;
-import io.github.francescolv.mine.permission.Permissions;
+import io.github.francescolv.mine.writing.Placed;
 import io.github.francescolv.mine.writing.Writing;
 import io.github.francescolv.mine.writing.WritingPayloads;
 import net.fabricmc.fabric.api.attachment.v1.AttachmentRegistry;
 import net.fabricmc.fabric.api.attachment.v1.AttachmentSyncPredicate;
 import net.fabricmc.fabric.api.attachment.v1.AttachmentType;
-import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.UUIDUtil;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.network.Filterable;
 import net.minecraft.util.Brightness;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Display;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.Interaction;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
-import net.minecraft.world.item.component.WritableBookContent;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -58,8 +49,6 @@ public final class BoardManager {
 
 	/** Line width in pixels before the text wraps: about 25 letters. */
 	static final int LINE_WIDTH = 150;
-	/** A pixel of text at size 1, in blocks. */
-	private static final float PIXEL = 0.025f;
 	/** Dark green with a little transparency: a school board. */
 	private static final int BACKGROUND = 0xE0203828;
 
@@ -79,24 +68,11 @@ public final class BoardManager {
 			Identifier.fromNamespaceAndPath(MineMod.MOD_ID, "board_size"), builder -> builder
 					.persistent(Codec.FLOAT).syncWith(ByteBufCodecs.FLOAT, AttachmentSyncPredicate.all()));
 
-	/** When each player last clicked a board (game time), to answer a click once. */
-	private static final Map<UUID, Long> LAST_CLICK = new HashMap<>();
-
 	private BoardManager() {
 	}
 
 	public static void register() {
-		UseEntityCallback.EVENT.register((player, world, hand, entity, hit) -> {
-			if (world.isClientSide() || !isBoard(entity) || !(player instanceof ServerPlayer serverPlayer)) {
-				return InteractionResult.PASS;
-			}
-			// One click can reach the server more than once: answer once per tick.
-			long now = world.getGameTime();
-			if (hand == InteractionHand.MAIN_HAND && !Long.valueOf(now).equals(LAST_CLICK.put(serverPlayer.getUUID(), now))) {
-				interact(serverPlayer, (Interaction) entity);
-			}
-			return InteractionResult.SUCCESS;
-		});
+		Placed.onClick(Interaction.class, BoardManager::isBoard, BoardManager::interact);
 	}
 
 	public static boolean isBoard(@Nullable Entity entity) {
@@ -109,9 +85,8 @@ public final class BoardManager {
 	 */
 	@Nullable
 	public static Interaction create(ServerPlayer maker, float size, List<String> pages) {
-		Direction facing = maker.getDirection();
-		BlockPos pos = maker.blockPosition().relative(facing, 2);
-		Interaction board = create(maker.level(), pos, facing.getOpposite(), maker.getUUID(), size, pages);
+		BlockPos pos = Placed.inFront(maker);
+		Interaction board = create(maker.level(), pos, maker.getDirection().getOpposite(), maker.getUUID(), size, pages);
 		if (board != null) {
 			MineMod.LOGGER.info("[MINE] {} created a board at {}", maker.getName().getString(), pos.toShortString());
 		}
@@ -154,8 +129,7 @@ public final class BoardManager {
 
 	/** Teachers can change every board; builders only the ones they made. */
 	public static boolean canChange(ServerPlayer player, Interaction board) {
-		return Permissions.isTeacher(player)
-				|| (Permissions.isBuilder(player) && player.getUUID().equals(board.getAttached(MAKER)));
+		return Placed.canChange(player, board.getAttached(MAKER));
 	}
 
 	public static List<String> source(Interaction board) {
@@ -215,7 +189,7 @@ public final class BoardManager {
 		// A thin box in the middle of the text, as tall as it is: wide enough to click, not so wide
 		// that it gets in the way of the blocks around the board.
 		board.setWidth(0.8f);
-		board.setHeight(Math.max(0.5f, lines(text) * 10 * PIXEL * size + 2 * PIXEL * size));
+		board.setHeight(Math.max(0.5f, lines(text) * 10 * BoardHit.PIXEL * size + 2 * BoardHit.PIXEL * size));
 	}
 
 	/** About how many lines the text takes once wrapped (letters are about 6 pixels wide). */
@@ -275,19 +249,12 @@ public final class BoardManager {
 
 	/** A book and quill with the board's text, ready to be changed. */
 	public static ItemStack book(Interaction board) {
-		ItemStack book = new ItemStack(Items.WRITABLE_BOOK);
-		book.set(DataComponents.WRITABLE_BOOK_CONTENT, new WritableBookContent(
-				source(board).stream().map(Filterable::passThrough).toList()));
-		book.set(DataComponents.CUSTOM_NAME, Component.translatableWithFallback("mine.board.book_name", "Board"));
-		return book;
+		return Placed.book(source(board), Component.translatableWithFallback("mine.board.book_name", "Board"));
 	}
 
 	/** The board closest to the player within {@code distance} blocks, among those they may change (all if {@code teacher}). */
 	@Nullable
 	static Interaction nearest(ServerPlayer player, double distance, boolean teacher) {
-		return player.level().getEntitiesOfClass(Interaction.class, player.getBoundingBox().inflate(distance),
-						board -> isBoard(board) && (teacher || canChange(player, board))).stream()
-				.min((a, b) -> Double.compare(a.distanceToSqr(player), b.distanceToSqr(player)))
-				.orElse(null);
+		return Placed.nearest(player, Interaction.class, distance, board -> isBoard(board) && (teacher || canChange(player, board)));
 	}
 }

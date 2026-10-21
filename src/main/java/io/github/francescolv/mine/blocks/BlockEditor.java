@@ -7,6 +7,7 @@ import com.google.gson.JsonParser;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import io.github.francescolv.mine.MineMod;
+import io.github.francescolv.mine.agent.AgentCommand;
 import io.github.francescolv.mine.agent.AgentManager;
 import io.github.francescolv.mine.agent.PythonBridge;
 import io.github.francescolv.mine.device.Devices;
@@ -53,6 +54,8 @@ public final class BlockEditor {
 	private static final int MAX_REQUEST = 512 * 1024;
 	private static final Pattern FILE = Pattern.compile("(?:[a-z0-9_-]+/)*[a-z0-9_.-]+");
 	private static final Gson GSON = new Gson();
+	/** The version of the editor's files, for the browser's cache: MINE's, and when the server started. */
+	private static final String FILES_TAG = "\"" + MineMod.VERSION + "-" + System.currentTimeMillis() + "\"";
 	private static final Map<String, String> TYPES = Map.ofEntries(
 			Map.entry("html", "text/html; charset=utf-8"),
 			Map.entry("js", "text/javascript; charset=utf-8"),
@@ -182,6 +185,14 @@ public final class BlockEditor {
 				reply(exchange, 404, "text/plain; charset=utf-8", "Not found".getBytes(StandardCharsets.UTF_8));
 				return;
 			}
+			// The editor's files only change with MINE (or a restart, while developing it): the
+			// browser keeps them, and asks each time whether they are still the same.
+			exchange.getResponseHeaders().set("Cache-Control", "no-cache");
+			exchange.getResponseHeaders().set("ETag", FILES_TAG);
+			if (FILES_TAG.equals(exchange.getRequestHeaders().getFirst("If-None-Match"))) {
+				exchange.sendResponseHeaders(304, -1);
+				return;
+			}
 			String type = TYPES.getOrDefault(name.substring(name.lastIndexOf('.') + 1), "application/octet-stream");
 			reply(exchange, 200, type, in.readAllBytes());
 		}
@@ -233,14 +244,8 @@ public final class BlockEditor {
 
 	/**
 	 * The student's lesson, as the editor shows it: title, step, goal and the hints revealed so
-	 * far, in the blocks' words; {@code null} if they have no lesson.
+	 * far, in {@code language}'s words; {@code null} if they have no lesson.
 	 */
-	@Nullable
-	static JsonObject lesson(ServerPlayer player) {
-		return lesson(player, Lesson.Language.BLOCKS);
-	}
-
-	/** As {@link #lesson(ServerPlayer)}, in {@code language}'s words. */
 	@Nullable
 	static JsonObject lesson(ServerPlayer player, Lesson.Language language) {
 		UUID uuid = player.getUUID();
@@ -321,18 +326,11 @@ public final class BlockEditor {
 			reply(exchange, 405, "text/plain; charset=utf-8", new byte[0]);
 			return;
 		}
-		byte[] body = exchange.getRequestBody().readNBytes(MAX_REQUEST + 1);
-		JsonObject request;
-		try {
-			request = body.length > MAX_REQUEST ? null : JsonParser.parseString(new String(body, StandardCharsets.UTF_8)).getAsJsonObject();
-		} catch (RuntimeException e) {
-			request = null;
-		}
-		if (request == null) {
+		JsonObject sent = body(exchange);
+		if (sent == null) {
 			reply(exchange, 400, "text/plain; charset=utf-8", new byte[0]);
 			return;
 		}
-		JsonObject sent = request;
 		json(exchange, onServer(server, () -> {
 			ServerPlayer player = player(server, code);
 			return player == null ? null : send(player, string(sent, "name"), string(sent, "lua"), string(sent, "workspace"),
@@ -355,7 +353,7 @@ public final class BlockEditor {
 		boolean ok = false;
 		if (!NAME.matcher(name).matches()) {
 			message = Component.translatableWithFallback("mine.blocks.bad_name",
-					"The program's name may only have small letters, digits and _ (up to 24).");
+					"The program's name may only have small letters, digits and _ (at most 24 characters).");
 		} else if (lua.length() > MAX_PROGRAM) {
 			message = Component.translatableWithFallback("mine.blocks.too_big", "The program is too big.");
 		} else {
@@ -374,11 +372,10 @@ public final class BlockEditor {
 				case SENT -> Component.translatableWithFallback("mine.blocks.sent", "Sent to your Byte: type %s in its terminal to run it.", name);
 				case STARTED, STARTING -> Component.translatableWithFallback("mine.blocks.started", "Your Byte is running %s.", name);
 				case BUSY -> Component.translatableWithFallback("mine.blocks.busy",
-						"Sent, but your Byte is busy: close its program or editor, then run %s.", name);
+						"Sent, but your Byte is busy: stop it by holding Ctrl+T for a second in its terminal, then run %s.", name);
 				case OFF -> Component.translatableWithFallback("mine.blocks.off",
 						"Sent: open your Byte (right-click it) to turn it on, then run %s.", name);
-				default -> Component.translatableWithFallback("mine.blocks.no_agent",
-						"You have no Byte yet: start a lesson, or ask your teacher.");
+				default -> noAgent();
 			};
 			MineMod.LOGGER.info("[MINE] {} sent the program {} from the blocks ({})", player.getName().getString(), name,
 					result.name().toLowerCase());
@@ -386,6 +383,10 @@ public final class BlockEditor {
 		answer.addProperty("ok", ok);
 		answer.addProperty("message", ServerLanguage.render(message, player));
 		return answer;
+	}
+
+	private static Component noAgent() {
+		return Component.translatableWithFallback("mine.blocks.no_agent", "You have no Byte yet: in the game, type /mine byte.");
 	}
 
 	@Nullable
@@ -453,7 +454,7 @@ public final class BlockEditor {
 			answer.addProperty("message", ServerLanguage.render(ok
 					? Component.translatableWithFallback("mine.python.saved", "Saved.")
 					: Component.translatableWithFallback("mine.blocks.bad_name",
-							"The program's name may only have small letters, digits and _ (up to 24)."), player));
+							"The program's name may only have small letters, digits and _ (at most 24 characters)."), player));
 			return answer;
 		}));
 	}
@@ -548,12 +549,8 @@ public final class BlockEditor {
 		}
 		Component problem = switch (result) {
 			case STARTED, STARTING -> null;
-			case BUSY -> Component.translatableWithFallback("mine.agent.run.busy",
-					"Your Byte is busy (a program is running, or the editor is open). Stop it by holding Ctrl+T for a second in its terminal.");
-			case OFF -> Component.translatableWithFallback("mine.agent.run.off",
-					"Your Byte is turned off: right-click it once to turn it on, then try again.");
-			default -> Component.translatableWithFallback("mine.blocks.no_agent",
-					"You have no Byte yet: start a lesson, or ask your teacher.");
+			case BUSY, OFF -> AgentCommand.message(result);
+			default -> noAgent();
 		};
 		if (problem != null) {
 			player.sendSystemMessage(problem.copy().withStyle(ChatFormatting.RED));
@@ -602,7 +599,10 @@ public final class BlockEditor {
 
 	private static void reply(HttpExchange exchange, int status, String type, byte[] body) throws IOException {
 		exchange.getResponseHeaders().set("Content-Type", type);
-		exchange.getResponseHeaders().set("Cache-Control", "no-store");
+		// Answers of the API are never kept: they change with the game.
+		if (!exchange.getResponseHeaders().containsKey("Cache-Control")) {
+			exchange.getResponseHeaders().set("Cache-Control", "no-store");
+		}
 		exchange.sendResponseHeaders(status, body.length == 0 ? -1 : body.length);
 		if (body.length > 0) {
 			exchange.getResponseBody().write(body);

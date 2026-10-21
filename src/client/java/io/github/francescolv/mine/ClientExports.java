@@ -8,12 +8,10 @@ import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -26,7 +24,7 @@ import java.util.regex.Pattern;
 final class ClientExports {
 
 	/** Downloads still arriving, by number. */
-	private static final Map<Integer, ByteArrayOutputStream> DOWNLOADS = new HashMap<>();
+	private static final Map<Integer, ChunkAssembler> DOWNLOADS = new HashMap<>();
 
 	private static final Pattern XDG_DOWNLOAD = Pattern.compile("^XDG_DOWNLOAD_DIR=\"(.*)\"\\s*$");
 
@@ -37,21 +35,17 @@ final class ClientExports {
 		ClientPlayNetworking.registerGlobalReceiver(ExportPayload.ID, (payload, context) -> {
 			Minecraft client = context.client();
 			// Files arrive in pieces, in order: keep them until the last one.
-			ByteArrayOutputStream content = payload.index() == 0 ? new ByteArrayOutputStream()
-					: DOWNLOADS.get(payload.download());
+			byte[] content = ChunkAssembler.receive(DOWNLOADS, payload.download(), payload.index(), payload.total(),
+					payload.content(), ExportPayload.MAX_SIZE);
 			if (content == null) {
+				if (DOWNLOADS.containsKey(payload.download())) {
+					client.gui.hud.setOverlayMessage(Component.translatableWithFallback("mine.export.progress", "Downloading %s: %s%%",
+							payload.fileName(), 100 * (payload.index() + 1) / payload.total()), false);
+				}
 				return;
 			}
-			content.writeBytes(payload.content());
-			if (payload.index() + 1 < payload.total()) {
-				DOWNLOADS.put(payload.download(), content);
-				client.gui.hud.setOverlayMessage(Component.translatableWithFallback("mine.export.progress", "Downloading %s: %s%%",
-						payload.fileName(), 100 * (payload.index() + 1) / payload.total()), false);
-				return;
-			}
-			DOWNLOADS.remove(payload.download());
 			try {
-				Path file = save(client, payload.fileName(), content.toByteArray());
+				Path file = save(client, payload.fileName(), content);
 				MineMod.LOGGER.info("[MINE] Saved {}", file);
 				client.gui.hud.getChat().addClientSystemMessage(Component.translatableWithFallback("mine.export.downloaded",
 						"File saved on your computer: %s %s", link(Component.literal(file.getFileName().toString()), file),
@@ -101,10 +95,9 @@ final class ClientExports {
 		} catch (IOException | RuntimeException e) {
 			MineMod.LOGGER.warn("[MINE] Could not read {}", userDirs, e);
 		}
-		for (Path dir : List.of(home.resolve("Downloads"))) {
-			if (Files.isDirectory(dir)) {
-				return dir;
-			}
+		Path downloads = home.resolve("Downloads");
+		if (Files.isDirectory(downloads)) {
+			return downloads;
 		}
 		return client.gameDirectory.toPath().resolve("mine-exports");
 	}

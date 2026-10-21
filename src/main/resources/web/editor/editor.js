@@ -8,7 +8,7 @@ const TEXTS = {
 		agent: 'Byte', logic: 'Logic', loops: 'Loops', math: 'Math', text: 'Text', variables: 'Variables', functions: 'Functions',
 		name: 'Program:', defaultName: 'blocks', send: 'Send to Byte', run: 'Run ▶', showCode: 'Lua', codeTitle: 'The Lua your blocks make',
 		sending: 'Sending…', expired: 'This link has expired. In the game, type /mine blocks to open the editor again.',
-		failed: 'The server didn\'t answer: is the game still open?',
+		noServer: 'The server didn\'t answer: is the game still open?',
 		forward: 'forward', back: 'back', up: 'up', down: 'down', left: 'left', right: 'right',
 		front: 'in front', above: 'above', below: 'below',
 		move: 'move %1', turn: 'turn %1', place: 'place a block %1', dig: 'dig %1', detect: 'block %1?',
@@ -31,7 +31,7 @@ const TEXTS = {
 		agent: 'Byte', logic: 'Logica', loops: 'Cicli', math: 'Matematica', text: 'Testo', variables: 'Variabili', functions: 'Funzioni',
 		name: 'Programma:', defaultName: 'blocchi', send: 'Invia a Byte', run: 'Esegui ▶', showCode: 'Lua', codeTitle: 'Il Lua dei tuoi blocchi',
 		sending: 'Invio…', expired: 'Questo collegamento è scaduto. Nel gioco scrivi /mine blocks per riaprire l\'editor.',
-		failed: 'Il server non risponde: il gioco è ancora aperto?',
+		noServer: 'Il server non risponde: il gioco è ancora aperto?',
 		forward: 'avanti', back: 'indietro', up: 'su', down: 'giù', left: 'sinistra', right: 'destra',
 		front: 'davanti', above: 'sopra', below: 'sotto',
 		move: 'vai %1', turn: 'gira a %1', place: 'piazza un blocco %1', dig: 'scava %1', detect: 'blocco %1?',
@@ -51,7 +51,9 @@ const TEXTS = {
 	}
 };
 
-const code = new URLSearchParams(location.search).get('code');
+const code = new URLSearchParams(location.search).get('code') || '';
+/** For the server: the block editor's programs and words (the default). */
+const KIND = '';
 // Python: its own page, with the same session.
 document.getElementById('python').href = 'python?code=' + encodeURIComponent(code);
 const AGENT_COLOUR = 30;
@@ -65,10 +67,6 @@ let clean = '';
 /** Looking at a student's program (a teacher): {owner, name}; null for one's own. */
 let viewing = null;
 
-function $(id) {
-	return document.getElementById(id);
-}
-
 function loadScript(src) {
 	return new Promise((resolve, reject) => {
 		const script = document.createElement('script');
@@ -77,11 +75,6 @@ function loadScript(src) {
 		script.onerror = reject;
 		document.head.appendChild(script);
 	});
-}
-
-function expired() {
-	$('expired').textContent = t.expired;
-	$('expired').hidden = false;
 }
 
 // Byte's blocks: each one is a line of Lua with byte (CC: Tweaked's turtle API, under Byte's name) or MINE's mine API.
@@ -131,67 +124,59 @@ function defineBlocks() {
 		{type: 'mine_wait', message0: t.wait, args0: [{type: 'input_value', name: 'SECONDS', check: 'Number'}], inputsInline: true,
 			previousStatement: null, nextStatement: null, style: 'loop_blocks'}
 	]);
-	const lua = window.lua.luaGenerator;
-	const Order = window.lua.Order;
-	lua.forBlock['mine_move'] = block => 'byte.' + block.getFieldValue('WAY') + '()\n';
-	lua.forBlock['mine_turn'] = block => 'byte.turn' + block.getFieldValue('WAY') + '()\n';
-	lua.forBlock['mine_place'] = block => 'byte.place' + block.getFieldValue('WHERE') + '()\n';
-	lua.forBlock['mine_dig'] = block => 'byte.dig' + block.getFieldValue('WHERE') + '()\n';
-	lua.forBlock['mine_detect'] = block => ['byte.detect' + block.getFieldValue('WHERE') + '()', Order.HIGH];
-	lua.forBlock['mine_compare'] = block => ['byte.compare' + block.getFieldValue('WHERE') + '()', Order.HIGH];
-	lua.forBlock['mine_count'] = () => ['byte.getItemCount()', Order.HIGH];
-	lua.forBlock['mine_select'] = block => 'byte.select(' + block.getFieldValue('SLOT') + ')\n';
-	lua.forBlock['mine_challenge'] = () => ['mine.challenge()', Order.HIGH];
-	lua.forBlock['mine_challenge_at'] = block => ['mine.challenge(' + block.getFieldValue('N') + ')', Order.HIGH];
-	lua.forBlock['mine_ripe'] = () => ['byte.ripeDown()', Order.HIGH];
-	lua.forBlock['mine_set_signal'] = (block, generator) => 'redstone.setOutput("' + block.getFieldValue('SIDE') + '", '
-		+ (generator.valueToCode(block, 'ON', Order.NONE) || 'false') + ')\n';
-	lua.forBlock['mine_get_signal'] = block => ['redstone.getInput("' + block.getFieldValue('SIDE') + '")', Order.HIGH];
-	lua.forBlock['mine_wait_signal'] = () => 'os.pullEvent("redstone")\n';
-	lua.forBlock['mine_wait'] = (block, generator) => 'os.sleep(' + (generator.valueToCode(block, 'SECONDS', Order.NONE) || '1') + ')\n';
-	// A board's keys: lower-case letters, digits and _ (as the board writes them, key:value).
-	const key = block => JSON.stringify(String(block.getFieldValue('KEY')).trim().toLowerCase());
-	lua.forBlock['mine_device_read'] = block => ['mine.device.read(' + key(block) + ')', Order.HIGH];
-	lua.forBlock['mine_device_send'] = (block, generator) => 'mine.device.send(' + key(block) + ', '
-		+ (generator.valueToCode(block, 'VALUE', Order.NONE) || '0') + ')\n';
-	lua.forBlock['mine_device_wait'] = block => 'mine.device.wait(' + key(block) + ')\n';
-	lua.forBlock['mine_device_connected'] = () => ['mine.device.connected()', Order.HIGH];
-	lua.forBlock['mine_say'] = (block, generator) =>
-		'mine.say(' + (generator.valueToCode(block, 'TEXT', Order.NONE) || '""') + ')\n';
+	generate(window.lua.luaGenerator, window.lua.Order.HIGH, window.lua.Order.NONE, {no: 'false', sleep: 'os.sleep'});
 	if (window.python) {
-		definePython(key);
+		const py = window.python.pythonGenerator;
+		// Four spaces, as Python programs are written (Blockly's default is two).
+		py.INDENT = '    ';
+		// The same names as in Lua (see web/python/mine.py).
+		generate(py, window.python.Order.FUNCTION_CALL, window.python.Order.NONE, {no: 'False', sleep: 'time.sleep'});
 	}
 }
 
-/** The same blocks in Python, with the same names as in Lua (see web/python/mine.py). */
-function definePython(key) {
-	const py = window.python.pythonGenerator;
-	const Order = window.python.Order;
-	// Four spaces, as Python programs are written (Blockly's default is two).
-	py.INDENT = '    ';
-	py.forBlock['mine_move'] = block => 'byte.' + block.getFieldValue('WAY') + '()\n';
-	py.forBlock['mine_turn'] = block => 'byte.turn' + block.getFieldValue('WAY') + '()\n';
-	py.forBlock['mine_place'] = block => 'byte.place' + block.getFieldValue('WHERE') + '()\n';
-	py.forBlock['mine_dig'] = block => 'byte.dig' + block.getFieldValue('WHERE') + '()\n';
-	py.forBlock['mine_detect'] = block => ['byte.detect' + block.getFieldValue('WHERE') + '()', Order.FUNCTION_CALL];
-	py.forBlock['mine_compare'] = block => ['byte.compare' + block.getFieldValue('WHERE') + '()', Order.FUNCTION_CALL];
-	py.forBlock['mine_count'] = () => ['byte.getItemCount()', Order.FUNCTION_CALL];
-	py.forBlock['mine_select'] = block => 'byte.select(' + block.getFieldValue('SLOT') + ')\n';
-	py.forBlock['mine_challenge'] = () => ['mine.challenge()', Order.FUNCTION_CALL];
-	py.forBlock['mine_challenge_at'] = block => ['mine.challenge(' + block.getFieldValue('N') + ')', Order.FUNCTION_CALL];
-	py.forBlock['mine_ripe'] = () => ['byte.ripeDown()', Order.FUNCTION_CALL];
-	py.forBlock['mine_set_signal'] = (block, generator) => 'redstone.setOutput("' + block.getFieldValue('SIDE') + '", '
-		+ (generator.valueToCode(block, 'ON', Order.NONE) || 'False') + ')\n';
-	py.forBlock['mine_get_signal'] = block => ['redstone.getInput("' + block.getFieldValue('SIDE') + '")', Order.FUNCTION_CALL];
-	py.forBlock['mine_wait_signal'] = () => 'os.pullEvent("redstone")\n';
-	py.forBlock['mine_wait'] = (block, generator) => 'time.sleep(' + (generator.valueToCode(block, 'SECONDS', Order.NONE) || '1') + ')\n';
-	py.forBlock['mine_device_read'] = block => ['mine.device.read(' + key(block) + ')', Order.FUNCTION_CALL];
-	py.forBlock['mine_device_send'] = (block, generator) => 'mine.device.send(' + key(block) + ', '
-		+ (generator.valueToCode(block, 'VALUE', Order.NONE) || '0') + ')\n';
-	py.forBlock['mine_device_wait'] = block => 'mine.device.wait(' + key(block) + ')\n';
-	py.forBlock['mine_device_connected'] = () => ['mine.device.connected()', Order.FUNCTION_CALL];
-	py.forBlock['mine_say'] = (block, generator) =>
-		'mine.say(' + (generator.valueToCode(block, 'TEXT', Order.NONE) || '""') + ')\n';
+// A board's keys: lower-case letters, digits and _ (as the board writes them, key:value).
+function boardKey(block) {
+	return JSON.stringify(String(block.getFieldValue('KEY')).trim().toLowerCase());
+}
+
+/**
+ * What each of Byte's blocks writes, in Lua and in Python: a statement (a line) or an expression
+ * (a value). {@code field} reads one of the block's fields, {@code input} the code of one of its
+ * inputs (or a default), and {@code words} what the two languages say differently.
+ */
+const BLOCK_CODE = {
+	mine_move: {statement: (field) => 'byte.' + field('WAY') + '()'},
+	mine_turn: {statement: (field) => 'byte.turn' + field('WAY') + '()'},
+	mine_place: {statement: (field) => 'byte.place' + field('WHERE') + '()'},
+	mine_dig: {statement: (field) => 'byte.dig' + field('WHERE') + '()'},
+	mine_detect: {expression: (field) => 'byte.detect' + field('WHERE') + '()'},
+	mine_compare: {expression: (field) => 'byte.compare' + field('WHERE') + '()'},
+	mine_count: {expression: () => 'byte.getItemCount()'},
+	mine_select: {statement: (field) => 'byte.select(' + field('SLOT') + ')'},
+	mine_challenge: {expression: () => 'mine.challenge()'},
+	mine_challenge_at: {expression: (field) => 'mine.challenge(' + field('N') + ')'},
+	mine_ripe: {expression: () => 'byte.ripeDown()'},
+	mine_set_signal: {statement: (field, input, words) => 'redstone.setOutput("' + field('SIDE') + '", ' + input('ON', words.no) + ')'},
+	mine_get_signal: {expression: (field) => 'redstone.getInput("' + field('SIDE') + '")'},
+	mine_wait_signal: {statement: () => 'os.pullEvent("redstone")'},
+	mine_wait: {statement: (field, input, words) => words.sleep + '(' + input('SECONDS', '1') + ')'},
+	mine_device_read: {expression: (field, input, words, block) => 'mine.device.read(' + boardKey(block) + ')'},
+	mine_device_send: {statement: (field, input, words, block) => 'mine.device.send(' + boardKey(block) + ', ' + input('VALUE', '0') + ')'},
+	mine_device_wait: {statement: (field, input, words, block) => 'mine.device.wait(' + boardKey(block) + ')'},
+	mine_device_connected: {expression: () => 'mine.device.connected()'},
+	mine_say: {statement: (field, input) => 'mine.say(' + input('TEXT', '""') + ')'}
+};
+
+/** Teaches {@code generator} (Lua's or Python's) Byte's blocks: calls bind as {@code call}, inputs are read at {@code none}. */
+function generate(generator, call, none, words) {
+	for (const [type, code] of Object.entries(BLOCK_CODE)) {
+		generator.forBlock[type] = (block, gen) => {
+			const field = name => block.getFieldValue(name);
+			const input = (name, otherwise) => gen.valueToCode(block, name, none) || otherwise;
+			return code.expression ? [code.expression(field, input, words, block), call]
+				: code.statement(field, input, words, block) + '\n';
+		};
+	}
 }
 
 /** The blocks as a Python program, with the imports it needs. */
@@ -280,6 +265,16 @@ function current() {
 	return JSON.stringify(Blockly.serialization.workspaces.save(workspace));
 }
 
+function lockEditing(locked) {
+	$('send').disabled = $('run').disabled = locked;
+}
+
+function relayout() {
+	if (workspace) {
+		Blockly.svgResize(workspace);
+	}
+}
+
 function load(json) {
 	workspace.clear();
 	if (json) {
@@ -291,10 +286,6 @@ function load(json) {
 	}
 	clean = current();
 	showCode();
-}
-
-function canLeave() {
-	return viewing !== null || current() === clean || confirm(t.unsaved);
 }
 
 function fillPrograms(selected) {
@@ -311,141 +302,12 @@ function fillPrograms(selected) {
 	}
 }
 
-/** The student's lesson: its step, the goal, the hints asked for so far and a button for the next. */
-function showLesson(lesson) {
-	$('lesson').hidden = !lesson;
-	if (lesson) {
-		$('lesson-title').textContent = lesson.title;
-		$('lesson-step').textContent = lesson.completed ? '' : t.step.replace('%1', lesson.step).replace('%2', lesson.steps);
-		$('lesson-goal').textContent = lesson.completed ? t.completed + ' ' + lesson.reflection : lesson.goal;
-		$('hint').hidden = lesson.completed || !lesson.more;
-		$('lesson-hints').replaceChildren(...(lesson.hints || []).map(hint => {
-			const item = document.createElement('li');
-			item.textContent = hint;
-			return item;
-		}));
-	}
-	if (workspace) {
-		Blockly.svgResize(workspace);
-	}
-}
-
-async function askHint() {
-	$('hint').disabled = true;
-	try {
-		const answer = await fetch('api/hint?code=' + encodeURIComponent(code), {method: 'POST'});
-		if (answer.status === 403) {
-			expired();
-			return;
-		}
-		showLesson((await answer.json()).lesson);
-	} catch (e) {
-		$('status').className = 'error';
-		$('status').textContent = t.failed;
-	} finally {
-		$('hint').disabled = false;
-	}
-}
-
-/**
- * Back from the game: the lesson may be at another step, and new programs may be there (a lesson
- * gives some). The blocks being edited stay as they are.
- */
-async function refresh() {
-	if (!session) {
-		return;
-	}
-	try {
-		const answer = await fetch('api/session?code=' + encodeURIComponent(code));
-		if (answer.status === 403) {
-			expired();
-			return;
-		}
-		const fresh = await answer.json();
-		session.programs = fresh.programs;
-		session.students = fresh.students;
-		fillPrograms(viewing === null ? $('name').value.trim() : '');
-		fillStudents();
-		showLesson(fresh.lesson);
-	} catch (e) {
-		// The server may be restarting: the next time will do.
-	}
-}
-
-function fillStudents() {
-	if (!session.students || session.students.length === 0) {
-		return;
-	}
-	const list = $('students');
-	list.replaceChildren(new Option(t.students, ''));
-	for (const student of session.students) {
-		for (const name of student.programs) {
-			list.add(new Option(student.name + ': ' + name, student.id + '/' + name));
-		}
-	}
-	list.hidden = false;
-}
-
-async function fetchProgram(student, name) {
-	const answer = await fetch('api/program?code=' + encodeURIComponent(code) + '&student=' + encodeURIComponent(student)
-		+ '&name=' + encodeURIComponent(name));
-	if (answer.status === 403) {
-		expired();
-		return null;
-	}
-	const program = await answer.json();
-	return program.workspace === undefined ? null : program;
-}
-
-async function openOwn(name) {
-	if (!canLeave()) {
-		fillPrograms($('name').value);
-		return;
-	}
-	setViewing(null);
-	if (name === '+') {
-		$('name').value = '';
-		load('');
-		fillPrograms('');
-		$('name').focus();
-		return;
-	}
-	const program = await fetchProgram(session.id, name);
-	if (program) {
-		$('name').value = program.name;
-		load(program.workspace);
-	}
-}
-
-async function openStudent(value) {
-	$('students').value = '';
-	const slash = value.indexOf('/');
-	if (slash < 0 || !canLeave()) {
-		return;
-	}
-	const program = await fetchProgram(value.substring(0, slash), value.substring(slash + 1));
-	if (program) {
-		load(program.workspace);
-		setViewing({owner: program.owner, name: program.name});
-	}
-}
-
-function setViewing(what) {
-	viewing = what;
-	$('viewing').hidden = what === null;
-	$('send').disabled = $('run').disabled = what !== null;
-	if (what !== null) {
-		$('viewing-text').textContent = t.viewing.replace('%1', what.name).replace('%2', what.owner);
-	}
-}
-
 async function send(run) {
 	const name = $('name').value.trim().toLowerCase();
 	$('send').disabled = $('run').disabled = true;
-	$('status').className = '';
-	$('status').textContent = t.sending;
+	status(t.sending);
 	try {
-		const answer = await fetch('api/send?code=' + encodeURIComponent(code), {
+		const answer = await fetch(api('api/send'), {
 			method: 'POST',
 			headers: {'Content-Type': 'application/json'},
 			body: JSON.stringify({
@@ -460,16 +322,14 @@ async function send(run) {
 			return;
 		}
 		const result = await answer.json();
-		$('status').className = result.ok ? '' : 'error';
-		$('status').textContent = result.message;
+		status(result.message, !result.ok);
 		if (result.ok) {
 			clean = current();
 			session.programs = [name].concat((session.programs || []).filter(other => other !== name));
 			fillPrograms(name);
 		}
 	} catch (e) {
-		$('status').className = 'error';
-		$('status').textContent = t.failed;
+		status(t.noServer, true);
 	} finally {
 		$('send').disabled = $('run').disabled = false;
 	}
@@ -478,7 +338,7 @@ async function send(run) {
 async function start() {
 	session = null;
 	try {
-		const answer = await fetch('api/session?code=' + encodeURIComponent(code || ''));
+		const answer = await fetch(api('api/session'));
 		session = answer.ok ? await answer.json() : null;
 	} catch (e) {
 		session = null;
@@ -522,9 +382,12 @@ async function start() {
 	load(session.workspace);
 	showLesson(session.lesson);
 	window.addEventListener('focus', refresh);
+	// The code pane follows the blocks, once they stop moving for a moment (a drag changes them at every step).
+	let codeTimer = null;
 	workspace.addChangeListener(event => {
 		if (!event.isUiEvent) {
-			showCode();
+			clearTimeout(codeTimer);
+			codeTimer = setTimeout(showCode, 150);
 		}
 	});
 	$('programs').onchange = () => openOwn($('programs').value);

@@ -1,6 +1,5 @@
 package io.github.francescolv.mine.gametest;
 
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import io.github.francescolv.mine.lab.Lab;
 import io.github.francescolv.mine.npc.NpcManager;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
@@ -38,8 +37,8 @@ public class LabGameTest {
 
 		// Loading takes effect over the next ticks: the lab is built once the chunks are there.
 		ctx.runAfterDelay(20, () -> {
-			execute(ctx, player(ctx).createCommandSourceStack().withPermission(PermissionSet.NO_PERMISSIONS), "mine lab build 2", false);
-			execute(ctx, asTeacher, "mine lab build 2", true);
+			GameTests.execute(ctx, player(ctx).createCommandSourceStack().withPermission(PermissionSet.NO_PERMISSIONS), "mine lab build 2", false);
+			GameTests.execute(ctx, asTeacher, "mine lab build 2", true);
 			Lab lab = Lab.get(ctx.getLevel().getServer());
 			ctx.assertTrue(lab.exists() && lab.lanes() == 2 && lab.facing() == Direction.SOUTH, "Built, facing south");
 			BlockPos first = lab.start(0);
@@ -69,12 +68,12 @@ public class LabGameTest {
 
 			// Builds go, the floor stays.
 			ctx.getLevel().setBlockAndUpdate(first.south(3), Blocks.OAK_PLANKS.defaultBlockState());
-			execute(ctx, asTeacher, "mine lab reset", true);
+			GameTests.execute(ctx, asTeacher, "mine lab reset", true);
 			ctx.assertTrue(ctx.getLevel().getBlockState(first.south(3)).isAir(), "The build is gone");
 			ctx.assertTrue(ctx.getLevel().getBlockState(first.below()).is(Blocks.CONCRETE.lime()), "The floor stays");
 
 			// Built again: no second guide, lanes given again.
-			execute(ctx, asTeacher, "mine lab build 2", true);
+			GameTests.execute(ctx, asTeacher, "mine lab build 2", true);
 			long guides = ctx.getLevel().getEntities((Entity) null, new AABB(sky).inflate(60),
 					e -> e.entityTags().contains("mine_lab") && NpcManager.isNpc(e)).size();
 			ctx.assertTrue(guides == 1, "One guide after building again: " + guides);
@@ -101,16 +100,5 @@ public class LabGameTest {
 
 	private static ServerPlayer player(GameTestHelper ctx) {
 		return ctx.makeMockServerPlayerInLevel();
-	}
-
-	private static void execute(GameTestHelper ctx, CommandSourceStack source, String command, boolean succeeds) {
-		int result;
-		try {
-			result = ctx.getLevel().getServer().getCommands().getDispatcher().execute(command, source);
-		} catch (CommandSyntaxException e) {
-			io.github.francescolv.mine.MineMod.LOGGER.info("[MINE test] /{} failed: {}", command, e.getMessage());
-			result = 0;
-		}
-		ctx.assertTrue((result > 0) == succeeds, "/" + command + (succeeds ? " should succeed" : " should fail"));
 	}
 }

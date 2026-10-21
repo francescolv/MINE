@@ -1,6 +1,5 @@
 package io.github.francescolv.mine.gametest;
 
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import io.github.francescolv.mine.lesson.LessonProgress;
 import io.github.francescolv.mine.npc.NpcCondition;
 import io.github.francescolv.mine.npc.NpcManager;
@@ -13,13 +12,11 @@ import io.github.francescolv.mine.writing.Writing;
 import io.github.francescolv.mine.writing.WritingPayloads;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.network.Filterable;
 import net.minecraft.server.permissions.LevelBasedPermissionSet;
 import net.minecraft.server.permissions.PermissionSet;
 import net.minecraft.util.ProblemReporter;
@@ -28,7 +25,6 @@ import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.component.WritableBookContent;
 import net.minecraft.world.level.storage.TagValueInput;
 import net.minecraft.world.level.storage.TagValueOutput;
 
@@ -41,35 +37,15 @@ import java.util.List;
  */
 public class NpcGameTest {
 
-	/** A player standing in the test area, facing south. */
-	private static ServerPlayer player(GameTestHelper ctx, boolean teacher) {
-		ServerPlayer player = ctx.makeMockServerPlayerInLevel();
-		BlockPos feet = ctx.absolutePos(new BlockPos(3, 1, 1));
-		player.snapTo(feet.getX() + 0.5, feet.getY(), feet.getZ() + 0.5, 0.0f, 0.0f);
-		if (teacher) {
-			// Level 4 explicitly: the test server gives operators level 0.
-			ctx.getLevel().getServer().getPlayerList().getOps()
-					.add(new net.minecraft.server.players.ServerOpListEntry(player.nameAndId(), LevelBasedPermissionSet.OWNER, false));
-		}
-		return player;
-	}
-
-	private static ItemStack bookWith(String... pages) {
-		ItemStack book = new ItemStack(Items.WRITABLE_BOOK);
-		book.set(DataComponents.WRITABLE_BOOK_CONTENT,
-				new WritableBookContent(List.of(pages).stream().map(Filterable::passThrough).toList()));
-		return book;
-	}
-
 	/** The teacher writes the dialogue in a book and gives it to the NPC; they can take it back to change it. */
 	@GameTest
 	public void theTeacherWritesTheDialogueInABook(GameTestHelper ctx) {
-		ServerPlayer teacher = player(ctx, true);
+		ServerPlayer teacher = GameTests.player(ctx, true);
 		Villager npc = NpcManager.create(teacher, "Ada");
 		ctx.assertTrue(npc != null && NpcManager.isNpc(npc), "The NPC should have been created");
 		ctx.assertTrue(npc.isNoAi() && npc.isInvulnerable(), "The NPC should stand still and not get hurt");
 
-		teacher.setItemInHand(InteractionHand.MAIN_HAND, bookWith("Hi! I'm Ada.", "Ready? [Start](/mine lesson start loops)", "", ""));
+		teacher.setItemInHand(InteractionHand.MAIN_HAND, GameTests.bookWith("Hi! I'm Ada.", "Ready? [Start](/mine lesson start loops)", "", ""));
 		NpcManager.interact(teacher, npc);
 		ctx.assertTrue(NpcManager.dialogue(npc).equals(List.of("Hi! I'm Ada.", "Ready? [Start](/mine lesson start loops)")),
 				"The book's pages, without the empty ones at the end: " + NpcManager.dialogue(npc));
@@ -85,8 +61,8 @@ public class NpcGameTest {
 		ctx.assertTrue(gotBook, "Sneaking with an empty hand should give the teacher the dialogue back in a book");
 
 		// A student with a book only reads: they can't change what the NPC says.
-		ServerPlayer student = player(ctx, false);
-		student.setItemInHand(InteractionHand.MAIN_HAND, bookWith("Hacked!"));
+		ServerPlayer student = GameTests.player(ctx, false);
+		student.setItemInHand(InteractionHand.MAIN_HAND, GameTests.bookWith("Hacked!"));
 		NpcManager.interact(student, npc);
 		ctx.assertTrue(NpcManager.dialogue(npc).size() == 2, "A student shouldn't be able to change the dialogue");
 		ctx.succeed();
@@ -118,7 +94,7 @@ public class NpcGameTest {
 	 */
 	@GameTest
 	public void theDialogueOpensAsABook(GameTestHelper ctx) {
-		Villager npc = NpcManager.create(player(ctx, true), "Ada");
+		Villager npc = NpcManager.create(GameTests.player(ctx, true), "Ada");
 		NpcManager.setDialogue(npc, List.of("Hi! I'm Ada.", "Ready? [Start](/mine lesson start loops)"));
 		ItemStack book = NpcManager.dialogueBook(npc);
 		var content = book.get(DataComponents.WRITTEN_BOOK_CONTENT);
@@ -131,7 +107,7 @@ public class NpcGameTest {
 		}, net.minecraft.network.chat.Style.EMPTY);
 		ctx.assertTrue(button[0], "The second page should have a clickable button");
 
-		ServerPlayer student = player(ctx, false);
+		ServerPlayer student = GameTests.player(ctx, false);
 		student.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.DIRT));
 		NpcManager.talk(student, npc);
 		ctx.assertTrue(student.getMainHandItem().is(Items.DIRT), "Reading shouldn't change what the student holds");
@@ -141,7 +117,7 @@ public class NpcGameTest {
 	/** Whoever may change an NPC finds an Edit button next to its name; MINE's window saves the dialogue. */
 	@GameTest
 	public void writingAnNpcInMinesWindow(GameTestHelper ctx) {
-		ServerPlayer teacher = player(ctx, true);
+		ServerPlayer teacher = GameTests.player(ctx, true);
 		Villager npc = NpcManager.create(teacher, "Ada");
 		NpcManager.setDialogue(npc, List.of("Hello"));
 		String writerView = NpcManager.dialogueBook(npc, NpcManager.allPages(npc), NpcText.Notes.NONE, true)
@@ -153,7 +129,7 @@ public class NpcGameTest {
 
 		ctx.assertTrue(Writing.save(teacher, WritingPayloads.Kind.NPC, npc.getUUID(), List.of("One", "Two", "", "")), "Saved");
 		ctx.assertTrue(NpcManager.dialogue(npc).equals(List.of("One", "Two")), "Empty pages at the end dropped: " + NpcManager.dialogue(npc));
-		ctx.assertFalse(Writing.save(player(ctx, false), WritingPayloads.Kind.NPC, npc.getUUID(), List.of("Hacked")), "Not a student's");
+		ctx.assertFalse(Writing.save(GameTests.player(ctx, false), WritingPayloads.Kind.NPC, npc.getUUID(), List.of("Hacked")), "Not a student's");
 		ctx.assertTrue(NpcManager.dialogue(npc).equals(List.of("One", "Two")), "Unchanged");
 		ctx.succeed();
 	}
@@ -161,7 +137,7 @@ public class NpcGameTest {
 	/** Clicking with a book nobody wrote in yet keeps the dialogue: the teacher is told how to write it. */
 	@GameTest
 	public void anEmptyBookKeepsTheDialogue(GameTestHelper ctx) {
-		ServerPlayer teacher = player(ctx, true);
+		ServerPlayer teacher = GameTests.player(ctx, true);
 		Villager npc = NpcManager.create(teacher, "Ada");
 		NpcManager.setDialogue(npc, List.of("Hello"));
 		teacher.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.WRITABLE_BOOK));
@@ -173,7 +149,7 @@ public class NpcGameTest {
 	/** The dialogue is saved with the NPC, so it survives a server restart. */
 	@GameTest
 	public void theDialogueIsSavedWithTheNpc(GameTestHelper ctx) {
-		Villager npc = NpcManager.create(player(ctx, true), "Ada");
+		Villager npc = NpcManager.create(GameTests.player(ctx, true), "Ada");
 		NpcManager.setDialogue(npc, List.of("One", "Two"));
 		TagValueOutput saved = TagValueOutput.createWithContext(ProblemReporter.DISCARDING, ctx.getLevel().registryAccess());
 		npc.saveWithoutId(saved);
@@ -187,21 +163,21 @@ public class NpcGameTest {
 	/** Only teachers create and remove NPCs; everyone can turn the pages, when close enough. */
 	@GameTest
 	public void commandsAndPermissions(GameTestHelper ctx) {
-		ServerPlayer player = player(ctx, false);
+		ServerPlayer player = GameTests.player(ctx, false);
 		CommandSourceStack asStudent = player.createCommandSourceStack().withPermission(PermissionSet.NO_PERMISSIONS);
 		CommandSourceStack asTeacher = player.createCommandSourceStack().withPermission(LevelBasedPermissionSet.GAMEMASTER);
 
-		execute(ctx, asStudent, "mine npc create Ada", false);
-		execute(ctx, asTeacher, "mine npc create Ada Lovelace", true);
+		GameTests.execute(ctx, asStudent, "mine npc create Ada", false);
+		GameTests.execute(ctx, asTeacher, "mine npc create Ada Lovelace", true);
 		Villager npc = ctx.getLevel().getEntitiesOfClass(Villager.class,
 				player.getBoundingBox().inflate(5), NpcManager::isNpc).getFirst();
 		ctx.assertTrue(npc.getCustomName().getString().equals("Ada Lovelace"), "Name: " + npc.getCustomName());
 
 
-		execute(ctx, asStudent, "mine npc remove", false);
-		execute(ctx, asTeacher, "mine npc remove", true);
+		GameTests.execute(ctx, asStudent, "mine npc remove", false);
+		GameTests.execute(ctx, asTeacher, "mine npc remove", true);
 		ctx.assertTrue(npc.isRemoved(), "The NPC should have been removed");
-		execute(ctx, asTeacher, "mine npc remove", false);
+		GameTests.execute(ctx, asTeacher, "mine npc remove", false);
 		ctx.succeed();
 	}
 
@@ -211,17 +187,17 @@ public class NpcGameTest {
 	 */
 	@GameTest
 	public void buildersChangeOnlyTheirOwnNpcs(GameTestHelper ctx) {
-		ServerPlayer teacher = player(ctx, true);
-		ServerPlayer builder = player(ctx, false);
-		ServerPlayer other = player(ctx, false);
+		ServerPlayer teacher = GameTests.player(ctx, true);
+		ServerPlayer builder = GameTests.player(ctx, false);
+		ServerPlayer other = GameTests.player(ctx, false);
 		CommandSourceStack asTeacher = teacher.createCommandSourceStack();
 		CommandSourceStack asBuilder = builder.createCommandSourceStack().withPermission(PermissionSet.NO_PERMISSIONS);
 
-		execute(ctx, asBuilder, "mine npc create Mine", false);
-		execute(ctx, builder.createCommandSourceStack().withPermission(PermissionSet.NO_PERMISSIONS), "mine builder add @s", false);
+		GameTests.execute(ctx, asBuilder, "mine npc create Mine", false);
+		GameTests.execute(ctx, builder.createCommandSourceStack().withPermission(PermissionSet.NO_PERMISSIONS), "mine builder add @s", false);
 		// All test players have the same name: the teacher's command is run "as" the builder (@s).
 		CommandSourceStack teacherAtBuilder = builder.createCommandSourceStack().withPermission(LevelBasedPermissionSet.GAMEMASTER);
-		execute(ctx, teacherAtBuilder, "mine builder add @s", true);
+		GameTests.execute(ctx, teacherAtBuilder, "mine builder add @s", true);
 		ctx.assertTrue(Permissions.isBuilder(builder) && !Permissions.isBuilder(other), "Only the chosen student is a builder");
 
 		Villager mine = NpcManager.create(builder, "Mine");
@@ -231,39 +207,39 @@ public class NpcGameTest {
 		ctx.assertTrue(NpcManager.canChange(teacher, mine), "The teacher changes every NPC");
 		ctx.assertTrue(!NpcManager.canChange(other, mine), "Other students only read");
 
-		builder.setItemInHand(InteractionHand.MAIN_HAND, bookWith("My museum"));
+		builder.setItemInHand(InteractionHand.MAIN_HAND, GameTests.bookWith("My museum"));
 		NpcManager.interact(builder, mine);
 		NpcManager.interact(builder, teachers);
 		ctx.assertTrue(NpcManager.dialogue(mine).equals(List.of("My museum")) && NpcManager.dialogue(teachers).isEmpty(),
 				"The builder's book should only change their own NPC");
 
-		execute(ctx, asTeacher, "mine builder list", true);
-		execute(ctx, teacherAtBuilder, "mine builder remove @s", true);
+		GameTests.execute(ctx, asTeacher, "mine builder list", true);
+		GameTests.execute(ctx, teacherAtBuilder, "mine builder remove @s", true);
 		ctx.assertTrue(!Permissions.isBuilder(builder) && !NpcManager.canChange(builder, mine),
 				"Without the role, the student only reads, even their own NPCs");
-		execute(ctx, asBuilder, "mine npc create Again", false);
+		GameTests.execute(ctx, asBuilder, "mine npc create Again", false);
 		ctx.succeed();
 	}
 
 	/** In the student view a teacher only reads, even their own NPCs, and loses MINE's teacher commands. */
 	@GameTest
 	public void theStudentView(GameTestHelper ctx) {
-		ServerPlayer teacher = player(ctx, true);
+		ServerPlayer teacher = GameTests.player(ctx, true);
 		CommandSourceStack asTeacher = teacher.createCommandSourceStack();
 		Villager npc = NpcManager.create(teacher, "Ada");
 
-		execute(ctx, asTeacher, "mine view student", true);
+		GameTests.execute(ctx, asTeacher, "mine view student", true);
 		ctx.assertTrue(!Permissions.isTeacher(teacher) && !NpcManager.canChange(teacher, npc),
 				"In the student view the teacher only reads");
-		teacher.setItemInHand(InteractionHand.MAIN_HAND, bookWith("Changed"));
+		teacher.setItemInHand(InteractionHand.MAIN_HAND, GameTests.bookWith("Changed"));
 		NpcManager.interact(teacher, npc);
 		ctx.assertTrue(NpcManager.dialogue(npc).isEmpty(), "The book shouldn't change the NPC in the student view");
-		execute(ctx, asTeacher, "mine npc create Bob", false);
-		execute(ctx, asTeacher, "mine lesson status @s", false);
+		GameTests.execute(ctx, asTeacher, "mine npc create Bob", false);
+		GameTests.execute(ctx, asTeacher, "mine lesson status @s", false);
 
-		execute(ctx, asTeacher, "mine view teacher", true);
+		GameTests.execute(ctx, asTeacher, "mine view teacher", true);
 		ctx.assertTrue(Permissions.isTeacher(teacher) && NpcManager.canChange(teacher, npc), "Back to teacher");
-		execute(ctx, asTeacher, "mine lesson status @s", true);
+		GameTests.execute(ctx, asTeacher, "mine lesson status @s", true);
 		ctx.succeed();
 	}
 
@@ -306,11 +282,11 @@ public class NpcGameTest {
 	 */
 	@GameTest
 	public void studentsAnswerQuizzes(GameTestHelper ctx) {
-		ServerPlayer teacher = player(ctx, true);
+		ServerPlayer teacher = GameTests.player(ctx, true);
 		Villager npc = NpcManager.create(teacher, "Quiz master");
 		NpcManager.setDialogue(npc, List.of("Hi!", "How many?\n[ ] 3\n[x] 4", "Favourite?\n[ ] loops\n[ ] functions"));
-		ServerPlayer alex = player(ctx, false);
-		ServerPlayer sam = player(ctx, false);
+		ServerPlayer alex = GameTests.player(ctx, false);
+		ServerPlayer sam = GameTests.player(ctx, false);
 		QuizResults results = QuizResults.get(ctx.getLevel().getServer());
 
 		ctx.assertTrue(NpcManager.choose(alex, npc.getUUID(), 1, 0, 1) == NpcManager.Choice.RIGHT, "4 is right");
@@ -347,9 +323,9 @@ public class NpcGameTest {
 	/** Students must be next to the NPC to answer: they can't answer from anywhere by typing the command. */
 	@GameTest
 	public void quizzesAreAnsweredNextToTheNpc(GameTestHelper ctx) {
-		Villager npc = NpcManager.create(player(ctx, true), "Far");
+		Villager npc = NpcManager.create(GameTests.player(ctx, true), "Far");
 		NpcManager.setDialogue(npc, List.of("Ok?\n[x] yes\n[ ] no"));
-		ServerPlayer student = player(ctx, false);
+		ServerPlayer student = GameTests.player(ctx, false);
 		student.snapTo(student.getX() + 20, student.getY(), student.getZ(), 0, 0);
 		ctx.assertTrue(NpcManager.choose(student, npc.getUUID(), 0, 0, 0) == NpcManager.Choice.INVALID, "Too far to answer");
 		ctx.succeed();
@@ -358,23 +334,23 @@ public class NpcGameTest {
 	/** Teachers and the NPC's builder read the answers next to it; teachers also from afar, by name; and clear them. */
 	@GameTest
 	public void teachersReadTheResults(GameTestHelper ctx) {
-		ServerPlayer player = player(ctx, false);
+		ServerPlayer player = GameTests.player(ctx, false);
 		CommandSourceStack asStudent = player.createCommandSourceStack().withPermission(PermissionSet.NO_PERMISSIONS);
 		CommandSourceStack asTeacher = player.createCommandSourceStack().withPermission(LevelBasedPermissionSet.GAMEMASTER);
 		String name = "Results " + java.util.UUID.randomUUID().toString().substring(0, 8);
 		Villager npc = NpcManager.create(player, name);
 		NpcManager.setDialogue(npc, List.of("2+2?\n[ ] 3\n[x] 4"));
 
-		execute(ctx, asTeacher, "mine npc results", false);
-		execute(ctx, asStudent, "mine npc choose " + npc.getUUID() + " 0 0 0", true);
-		execute(ctx, asStudent, "mine npc choose not-a-uuid 0 0 0", false);
-		execute(ctx, asStudent, "mine npc results", false);
-		execute(ctx, asTeacher, "mine npc results", true);
-		execute(ctx, asTeacher, "mine npc results " + name, true);
-		execute(ctx, asTeacher, "mine npc results Nobody at all", false);
+		GameTests.execute(ctx, asTeacher, "mine npc results", false);
+		GameTests.execute(ctx, asStudent, "mine npc choose " + npc.getUUID() + " 0 0 0", true);
+		GameTests.execute(ctx, asStudent, "mine npc choose not-a-uuid 0 0 0", false);
+		GameTests.execute(ctx, asStudent, "mine npc results", false);
+		GameTests.execute(ctx, asTeacher, "mine npc results", true);
+		GameTests.execute(ctx, asTeacher, "mine npc results " + name, true);
+		GameTests.execute(ctx, asTeacher, "mine npc results Nobody at all", false);
 
-		execute(ctx, asStudent, "mine npc clear", false);
-		execute(ctx, asTeacher, "mine npc clear", true);
+		GameTests.execute(ctx, asStudent, "mine npc clear", false);
+		GameTests.execute(ctx, asTeacher, "mine npc clear", true);
 		ctx.assertTrue(QuizResults.get(ctx.getLevel().getServer()).of(npc.getUUID()).isEmpty(), "Answers cleared");
 		ctx.succeed();
 	}
@@ -385,9 +361,9 @@ public class NpcGameTest {
 	 */
 	@GameTest
 	public void theResultIsUnderTheQuestion(GameTestHelper ctx) {
-		Villager npc = NpcManager.create(player(ctx, true), "Ada");
+		Villager npc = NpcManager.create(GameTests.player(ctx, true), "Ada");
 		NpcManager.setDialogue(npc, List.of("Hi!", "Ok?\n[x] yes\n[ ] no\n\nBye", "More?\n[x] sure\n[ ] no"));
-		ServerPlayer student = player(ctx, false);
+		ServerPlayer student = GameTests.player(ctx, false);
 		NpcManager.choose(student, npc.getUUID(), 1, 0, 0);
 
 		var pages = NpcManager.dialogueBook(npc, NpcManager.allPages(npc), NpcManager.notes(student, npc,
@@ -404,9 +380,9 @@ public class NpcGameTest {
 	/** The CSV has a row per student and question; texts with commas, quotes and new lines are quoted. */
 	@GameTest
 	public void quizAnswersAsCsv(GameTestHelper ctx) {
-		Villager npc = NpcManager.create(player(ctx, true), "Csv \"test\"");
+		Villager npc = NpcManager.create(GameTests.player(ctx, true), "Csv \"test\"");
 		NpcManager.setDialogue(npc, List.of("Hi, how many?\nReally?\n[ ] 3\n[x] 4", "Liked it?\n[ ] yes, a lot\n[ ] no"));
-		ServerPlayer student = player(ctx, false);
+		ServerPlayer student = GameTests.player(ctx, false);
 		NpcManager.choose(student, npc.getUUID(), 0, 0, 0);
 		NpcManager.choose(student, npc.getUUID(), 0, 0, 1);
 		NpcManager.choose(student, npc.getUUID(), 1, 0, 0);
@@ -423,16 +399,16 @@ public class NpcGameTest {
 	/** Only teachers export; the file is saved in the world, in mine/exports. */
 	@GameTest
 	public void teachersExportTheAnswers(GameTestHelper ctx) {
-		ServerPlayer player = player(ctx, false);
+		ServerPlayer player = GameTests.player(ctx, false);
 		Villager npc = NpcManager.create(player, "Export");
 		NpcManager.setDialogue(npc, List.of("Ok?\n[x] yes\n[ ] no"));
 		NpcManager.choose(player, npc.getUUID(), 0, 0, 0);
 
-		execute(ctx, player.createCommandSourceStack().withPermission(PermissionSet.NO_PERMISSIONS), "mine npc export", false);
+		GameTests.execute(ctx, player.createCommandSourceStack().withPermission(PermissionSet.NO_PERMISSIONS), "mine npc export", false);
 		java.nio.file.Path folder = ctx.getLevel().getServer().getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT)
 				.resolve("mine").resolve("exports");
 		long before = count(folder);
-		execute(ctx, player.createCommandSourceStack().withPermission(LevelBasedPermissionSet.GAMEMASTER), "mine npc export", true);
+		GameTests.execute(ctx, player.createCommandSourceStack().withPermission(LevelBasedPermissionSet.GAMEMASTER), "mine npc export", true);
 		ctx.assertTrue(count(folder) > before || before > 0, "A CSV file should be in " + folder);
 		ctx.succeed();
 	}
@@ -451,14 +427,14 @@ public class NpcGameTest {
 	 */
 	@GameTest
 	public void twoQuestionsOnAPage(GameTestHelper ctx) {
-		Villager npc = NpcManager.create(player(ctx, true), "Two");
+		Villager npc = NpcManager.create(GameTests.player(ctx, true), "Two");
 		NpcManager.setDialogue(npc, List.of("2+2?\n[ ] 3\n[x] 4\n\n3+3?\n[x] 6\n[ ] 7", "Bye!"));
 		String page = NpcManager.dialogueBook(npc, List.of(0), (p, q, quiz) -> q == 0 ? Component.literal("WRONG") : null, false)
 				.get(DataComponents.WRITTEN_BOOK_CONTENT).pages().getFirst().raw().getString();
 		ctx.assertTrue(page.indexOf("B) 4") < page.indexOf("WRONG") && page.indexOf("WRONG") < page.indexOf("3+3?"),
 				"The result under the first question: " + page);
 
-		ServerPlayer student = player(ctx, false);
+		ServerPlayer student = GameTests.player(ctx, false);
 		ctx.assertTrue(NpcManager.choose(student, npc.getUUID(), 0, 1, 1) == NpcManager.Choice.WRONG, "7 is wrong");
 		ctx.assertTrue(NpcManager.choose(student, npc.getUUID(), 0, 0, 1) == NpcManager.Choice.RIGHT, "4 is right");
 		ctx.assertTrue(NpcManager.choose(student, npc.getUUID(), 0, 1, 0) == NpcManager.Choice.RIGHT, "6 is right");
@@ -496,11 +472,11 @@ public class NpcGameTest {
 	 */
 	@GameTest
 	public void theNpcFollowsTheLesson(GameTestHelper ctx) {
-		ServerPlayer teacher = player(ctx, true);
+		ServerPlayer teacher = GameTests.player(ctx, true);
 		Villager npc = NpcManager.create(teacher, "Guide");
 		NpcManager.setDialogue(npc, List.of("Hi all", "@lesson loops 2\nHint for step 2", "@lesson loops\nDoing loops",
 				"@done loops\nWell done", "@lesson none\nStart a lesson", "@lesso loops\nBroken"));
-		ServerPlayer student = player(ctx, false);
+		ServerPlayer student = GameTests.player(ctx, false);
 		LessonProgress progress = LessonProgress.get(ctx.getLevel().getServer());
 		long now = System.currentTimeMillis();
 
@@ -530,23 +506,12 @@ public class NpcGameTest {
 	/** Questions on a page for some students work like any other. */
 	@GameTest
 	public void questionsOnPagesForSomeStudents(GameTestHelper ctx) {
-		Villager npc = NpcManager.create(player(ctx, true), "Conditional quiz");
+		Villager npc = NpcManager.create(GameTests.player(ctx, true), "Conditional quiz");
 		NpcManager.setDialogue(npc, List.of("@lesson none\nOk?\n[x] yes\n[ ] no"));
-		ServerPlayer student = player(ctx, false);
+		ServerPlayer student = GameTests.player(ctx, false);
 		ctx.assertTrue(NpcManager.choose(student, npc.getUUID(), 0, 0, 0) == NpcManager.Choice.RIGHT, "Right");
 		ctx.assertTrue(QuizResults.get(ctx.getLevel().getServer()).answer(npc.getUUID(), "Ok?", student.getUUID()) != null,
 				"The question is saved without its @ line");
 		ctx.succeed();
-	}
-
-	private static void execute(GameTestHelper ctx, CommandSourceStack source, String command, boolean succeeds) {
-		int result;
-		try {
-			result = ctx.getLevel().getServer().getCommands().getDispatcher().execute(command, source);
-		} catch (CommandSyntaxException e) {
-			io.github.francescolv.mine.MineMod.LOGGER.info("[MINE test] /{} failed: {}", command, e.getMessage());
-			result = 0;
-		}
-		ctx.assertTrue((result > 0) == succeeds, "/" + command + (succeeds ? " should succeed" : " should fail"));
 	}
 }

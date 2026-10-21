@@ -10,20 +10,16 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ButtonBlock;
 import net.minecraft.world.level.block.DaylightDetectorBlock;
-import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.PressurePlateBlock;
-import net.minecraft.world.level.block.RedstoneLampBlock;
 import net.minecraft.world.level.block.piston.PistonBaseBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.AttachFace;
-import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
 /**
@@ -44,12 +40,6 @@ import java.util.function.Supplier;
  */
 final class SensorChecks {
 
-	/**
-	 * Before MINE first acts, while the program gets going: both real time (the Agent's computer
-	 * runs on its own) and game ticks.
-	 */
-	static final long SETTLE_MS = 2000;
-	static final int SETTLE_TICKS = 40;
 	/**
 	 * How long MINE keeps a plate or a button down, as a player would (a second); MINE looks at
 	 * what the Agent did then. All the test's times are game ticks, as the Agent's own clock
@@ -104,11 +94,7 @@ final class SensorChecks {
 			Map<BlockPos, BlockState> blocks = new LinkedHashMap<>();
 			switch (part) {
 				case PLATE_DOOR -> {
-					BlockPos door = agent.relative(ahead);
-					blocks.put(door, Blocks.IRON_DOOR.defaultBlockState().setValue(DoorBlock.FACING, ahead)
-							.setValue(DoorBlock.HALF, DoubleBlockHalf.LOWER));
-					blocks.put(door.above(), Blocks.IRON_DOOR.defaultBlockState().setValue(DoorBlock.FACING, ahead)
-							.setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER));
+					Scenes.ironDoor(blocks, agent.relative(ahead), ahead);
 					blocks.put(agent.relative(left), Blocks.OAK_PRESSURE_PLATE.defaultBlockState());
 				}
 				case NIGHT_LAMP -> {
@@ -139,16 +125,8 @@ final class SensorChecks {
 				case BUTTON_BRIDGE -> List.of(agent.relative(ahead.getClockWise()));
 				case NIGHT_LAMP -> List.of();
 			};
-			for (BlockPos pos : grounded) {
-				if (!world.getBlockState(pos.below()).isFaceSturdy(world, pos.below(), Direction.UP)) {
-					return new NoRoom();
-				}
-			}
-			for (Map.Entry<BlockPos, BlockState> block : blocks.entrySet()) {
-				BlockState there = world.getBlockState(block.getKey());
-				if (!there.is(block.getValue().getBlock()) && !there.canBeReplaced()) {
-					return new NoRoom();
-				}
+			if (!Scenes.fits(world, blocks, grounded)) {
+				return new NoRoom();
 			}
 			blocks.forEach((pos, state) -> {
 				BlockState there = world.getBlockState(pos);
@@ -167,8 +145,8 @@ final class SensorChecks {
 				// An extended piston: its head, and the walkway one block further.
 				places.add(agent.relative(ahead, 3));
 			}
-			// Stone posts with a plate on top or a button or lever on the side (the first version of
-			// this lesson, and lesson 6's scene): posts first in the list, so they go last.
+			// Stone posts with a plate on top or a button or lever on the side (lesson 6's scene):
+			// posts first in the list, so they go last.
 			Direction left = ahead.getCounterClockWise();
 			Direction right = ahead.getClockWise();
 			places.addAll(0, List.of(agent.relative(left), agent.relative(right), agent.relative(left).above(),
@@ -188,13 +166,11 @@ final class SensorChecks {
 		}
 
 		boolean open() {
-			BlockState door = world.getBlockState(door());
-			return door.is(Blocks.IRON_DOOR) && door.getValue(DoorBlock.OPEN);
+			return Scenes.open(world, door());
 		}
 
 		boolean lit() {
-			BlockState lamp = world.getBlockState(lamp());
-			return lamp.is(Blocks.REDSTONE_LAMP) && lamp.getValue(RedstoneLampBlock.LIT);
+			return Scenes.lit(world, lamp());
 		}
 
 		/** Whether the sensor says it's dark: no signal. */
@@ -238,7 +214,7 @@ final class SensorChecks {
 
 		@Override
 		public boolean untouched() {
-			return blocks.entrySet().stream().allMatch(block -> world.getBlockState(block.getKey()).is(block.getValue().getBlock()));
+			return Scenes.untouched(world, blocks);
 		}
 
 		@Override
@@ -258,85 +234,12 @@ final class SensorChecks {
 		}
 	}
 
-	/**
-	 * One moment of a live test: first MINE looks ({@code ok}, and if it's wrong, {@code why} tells
-	 * the student), then it acts ({@code act}), then it waits {@code ticks} before the next one.
-	 */
-	record Beat(@Nullable BooleanSupplier ok, @Nullable Supplier<Component> why, @Nullable Runnable act, int ticks) {
-	}
-
-	/** A live test: beats one after the other while the program runs, around a scene MINE built. */
-	static final class Timeline implements Checks.Challenge {
-
-		final ServerLevel world;
-		final Checks.Challenge scene;
-		final List<Beat> beats = new ArrayList<>();
-		/** The game tick of the next beat; before the first one, also the real time it may start. */
-		long next = -1;
-		long settled;
-		int beat;
-		boolean passed;
-		@Nullable
-		Component failure;
-
-		Timeline(ServerLevel world, Checks.Challenge scene) {
-			this.world = world;
-			this.scene = scene;
-		}
-
-		Timeline then(@Nullable BooleanSupplier ok, @Nullable Supplier<Component> why, @Nullable Runnable act, int ticks) {
-			beats.add(new Beat(ok, why, act, ticks));
-			return this;
-		}
-
-		/** One tick of the test; {@code true} when it is over, passed or not. */
-		boolean tick() {
-			long now = world.getGameTime();
-			if (next < 0) {
-				next = now + SETTLE_TICKS;
-				settled = System.currentTimeMillis() + SETTLE_MS;
-			}
-			if (passed || failure != null || now < next || beat == 0 && System.currentTimeMillis() < settled) {
-				return passed || failure != null;
-			}
-			Beat current = beats.get(beat);
-			if (current.ok() != null && !current.ok().getAsBoolean()) {
-				failure = current.why().get();
-				return true;
-			}
-			if (current.act() != null) {
-				current.act().run();
-			}
-			next = now + current.ticks();
-			if (++beat == beats.size()) {
-				passed = true;
-				return true;
-			}
-			return false;
-		}
-
-		@Override
-		public boolean untouched() {
-			return scene.untouched();
-		}
-
-		@Override
-		public void remove() {
-			scene.remove();
-		}
-	}
-
 	/** What all three checks share: a station, a live test, its outcome. */
 	private abstract static class Live implements Check {
 
 		abstract Part part();
 
-		abstract Timeline test(Station station);
-
-		@Override
-		public Object start(AgentProgram program) {
-			return prepare(program.world(), program.startPos(), program.startFacing());
-		}
+		abstract LiveTest test(Station station);
 
 		@Override
 		public Object prepare(ServerLevel world, BlockPos start, Direction ahead) {
@@ -347,19 +250,19 @@ final class SensorChecks {
 		@Override
 		public boolean watch(AgentProgram program, @Nullable Object memo) {
 			// No room for the station: stop at once, so the student is told instead of waiting.
-			return memo instanceof NoRoom || memo instanceof Timeline timeline && timeline.tick();
+			return memo instanceof NoRoom || memo instanceof LiveTest timeline && timeline.tick();
 		}
 
 		@Override
 		public boolean passed(AgentProgram program, @Nullable Object memo) {
-			return memo instanceof Timeline timeline && timeline.passed;
+			return memo instanceof LiveTest timeline && timeline.passed;
 		}
 
 		@Override
 		public void ended(AgentProgram program, @Nullable Object memo, boolean passed) {
 			// Nobody stays on the plate, no button stays down, whatever happened.
-			if (memo instanceof Timeline timeline) {
-				Station station = (Station) timeline.scene;
+			if (memo instanceof LiveTest timeline) {
+				Station station = (Station) timeline.scene();
 				station.stand(false);
 				station.push(false);
 			}
@@ -370,11 +273,10 @@ final class SensorChecks {
 			if (memo instanceof NoRoom noRoom) {
 				return noRoom.text();
 			}
-			if (memo instanceof Timeline timeline && timeline.failure != null) {
+			if (memo instanceof LiveTest timeline && timeline.failure != null) {
 				return timeline.failure;
 			}
-			return Component.translatableWithFallback("mine.lesson.check.keep_listening",
-					"Not yet: your program ended before MINE could try it. Keep it listening: while true do ... end.");
+			return Checks.keepListening();
 		}
 	}
 
@@ -392,13 +294,13 @@ final class SensorChecks {
 		}
 
 		@Override
-		Timeline test(Station s) {
+		LiveTest test(Station s) {
 			Supplier<Component> stayedClosed = () -> Component.translatableWithFallback("mine.lesson.check.plate_closed",
 					"Not yet: someone stepped on the plate, but the door didn't open.");
 			// On the plate for a second: the door open by then, and still open after.
 			// Ticks from MINE stepping on the plate: open by 16, plate free at 24, still open at 44
 			// (2.2 s), closed at 110 (5.5 s).
-			return new Timeline(s.world(), s)
+			return LiveTest.inGameTime(s.world(), s)
 					.then(null, null, () -> s.stand(true), 16)
 					.then(s::open, stayedClosed, null, PRESS_TICKS - 16)
 					.then(null, null, () -> s.stand(false), 20)
@@ -424,9 +326,9 @@ final class SensorChecks {
 		}
 
 		@Override
-		Timeline test(Station s) {
+		LiveTest test(Station s) {
 			// The sensor updates once a second (20 ticks): then the Agent reacts.
-			return new Timeline(s.world(), s)
+			return LiveTest.inGameTime(s.world(), s)
 					.then(() -> s.lit() == s.dark(), () -> wrongLamp(s), () -> s.invert(true), 50)
 					.then(() -> s.lit() == s.dark(), () -> wrongLamp(s), () -> s.invert(false), 50)
 					.then(() -> s.lit() == s.dark(), () -> wrongLamp(s), null, 0);
@@ -435,8 +337,7 @@ final class SensorChecks {
 		private static Component wrongLamp(Station s) {
 			Component light = s.dark() ? Component.translatableWithFallback("mine.lesson.check.dark", "dark")
 					: Component.translatableWithFallback("mine.lesson.check.light", "light");
-			Component lamp = s.lit() ? Component.translatableWithFallback("mine.lesson.check.on", "on")
-					: Component.translatableWithFallback("mine.lesson.check.off", "off");
+			Component lamp = Checks.onOff(s.lit());
 			return Component.translatableWithFallback("mine.lesson.check.night_lamp",
 					"Not yet: the sensor said it was %s, and the lamp was %s. It must be on only when it's dark.", light, lamp);
 		}
@@ -445,8 +346,8 @@ final class SensorChecks {
 		public void ended(AgentProgram program, @Nullable Object memo, boolean passed) {
 			super.ended(program, memo, passed);
 			// Back to a plain sensor, whatever happened.
-			if (memo instanceof Timeline timeline) {
-				((Station) timeline.scene).invert(false);
+			if (memo instanceof LiveTest timeline) {
+				((Station) timeline.scene()).invert(false);
 			}
 		}
 	}
@@ -465,7 +366,7 @@ final class SensorChecks {
 		}
 
 		@Override
-		Timeline test(Station s) {
+		LiveTest test(Station s) {
 			// Wherever the walkway is when MINE starts, each press must change it.
 			boolean[] was = new boolean[1];
 			Supplier<Component> didntMove = () -> Component.translatableWithFallback("mine.lesson.check.bridge_still",
@@ -478,7 +379,7 @@ final class SensorChecks {
 			};
 			Runnable release = () -> s.push(false);
 			// Pressed for a second, then up: the walkway must have moved, and stay there.
-			return new Timeline(s.world(), s)
+			return LiveTest.inGameTime(s.world(), s)
 					.then(null, null, press, PRESS_TICKS)
 					.then(() -> s.out() != was[0], didntMove, release, 30)
 					.then(() -> s.out() != was[0], wentBack, press, PRESS_TICKS)

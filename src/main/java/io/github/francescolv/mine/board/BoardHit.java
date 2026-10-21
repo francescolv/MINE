@@ -10,7 +10,8 @@ import net.minecraft.world.phys.Vec3;
  */
 public final class BoardHit {
 
-	private static final double PIXEL = 0.025;
+	/** Blocks per pixel of text, at size 1: as Minecraft draws text displays. */
+	static final float PIXEL = 0.025f;
 	private static final int LINE_HEIGHT = 9;
 
 	private BoardHit() {

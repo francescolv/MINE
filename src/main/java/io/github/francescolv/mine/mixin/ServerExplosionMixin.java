@@ -24,10 +24,8 @@ abstract class ServerExplosionMixin {
 
 	@Inject(method = "calculateExplodedPositions", at = @At("RETURN"), cancellable = true)
 	private void mine$protectedZones(CallbackInfoReturnable<List<BlockPos>> cir) {
-		List<BlockPos> positions = cir.getReturnValue();
-		if (positions.stream().anyMatch(pos -> ZoneProtection.isProtected(level, pos))) {
-			List<BlockPos> left = new ArrayList<>(positions);
-			left.removeIf(pos -> ZoneProtection.isProtected(level, pos));
+		List<BlockPos> left = new ArrayList<>(cir.getReturnValue());
+		if (left.removeIf(pos -> ZoneProtection.isProtected(level, pos))) {
 			cir.setReturnValue(left);
 		}
 	}

@@ -2,6 +2,7 @@ package io.github.francescolv.mine.lesson;
 
 import io.github.francescolv.mine.agent.AgentProgram;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -10,31 +11,63 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
 /**
- * A live test in real time, for programs that answer through Python (each call goes to the
- * server and back): MINE does something (plays the board, pulls a lever), waits, looks, and so on.
- * Like {@link SensorChecks.Timeline}, but its waits are in milliseconds, not game ticks, which a
- * test server runs much faster than real time.
+ * A live test: while the program runs, MINE does something (plays the board, pulls a lever,
+ * steps on a plate), waits, looks, and so on, one beat after the other, around a scene it built.
+ * <ul>
+ * <li>In real time ({@link #LiveTest(Checks.Challenge)}), for programs that answer through
+ * Python (each call goes to the server and back), or whose answer MINE only looks at.</li>
+ * <li>In game ticks ({@link #inGameTime}), for Lua programs that wait themselves: the Agent's
+ * clock (os.sleep, timers) counts game ticks, which a test server runs much faster than real
+ * time. The first beat also waits for the program to get going in real time.</li>
+ * </ul>
  */
 final class LiveTest implements Checks.Challenge {
 
-	/** Before the first beat: the program gets going (Python loads, Byte starts). */
+	/** Before the first beat, in real time: the program gets going (Python loads, Byte starts). */
 	static final long SETTLE_MS = 3000;
-	/** How long a program has to answer something MINE did. */
+	/** How long a program has to answer something MINE did, in real time. */
 	static final long ANSWER_MS = 1500;
+	/** Before the first beat, in game time: both real time (the Agent's computer runs on its own) and game ticks. */
+	static final long GAME_SETTLE_MS = 2000;
+	static final int GAME_SETTLE_TICKS = 40;
 
-	private record Beat(@Nullable BooleanSupplier ok, @Nullable Supplier<Component> why, @Nullable Runnable act, long ms) {
+	/**
+	 * One moment of the test: first MINE looks ({@code ok}, and if it's wrong, {@code why} tells
+	 * the student), then it acts ({@code act}), then it waits {@code pause} before the next one.
+	 */
+	private record Beat(@Nullable BooleanSupplier ok, @Nullable Supplier<Component> why, @Nullable Runnable act, long pause) {
 	}
 
+	/** In game time, the world whose ticks the test counts; {@code null} in real time. */
+	@Nullable
+	private final ServerLevel world;
 	private final Checks.Challenge scene;
+	/** Before the first beat: in the test's time, and also in real time. */
+	private final long settle;
+	private final long settleMs;
 	private final List<Beat> beats = new ArrayList<>();
+	/** When the next beat is, in the test's time; the clock starts with the program (the test may be made before). */
 	private long next = -1;
+	private long settled;
 	private int beat;
 	boolean passed;
 	@Nullable
 	Component failure;
 
-	LiveTest(Checks.Challenge scene) {
+	private LiveTest(@Nullable ServerLevel world, Checks.Challenge scene, long settle, long settleMs) {
+		this.world = world;
 		this.scene = scene;
+		this.settle = settle;
+		this.settleMs = settleMs;
+	}
+
+	/** In real time, around {@code scene}, after {@code settleMs}. */
+	LiveTest(Checks.Challenge scene, long settleMs) {
+		this(null, scene, settleMs, 0);
+	}
+
+	LiveTest(Checks.Challenge scene) {
+		this(scene, SETTLE_MS);
 	}
 
 	/** Nothing built in the world: the test only plays the board and looks at what Byte tells it. */
@@ -42,9 +75,14 @@ final class LiveTest implements Checks.Challenge {
 		this(NOTHING);
 	}
 
-	/** First checks {@code ok} (failing with {@code why}), then does {@code act}, then waits {@code ms}. */
-	LiveTest then(@Nullable BooleanSupplier ok, @Nullable Supplier<Component> why, @Nullable Runnable act, long ms) {
-		beats.add(new Beat(ok, why, act, ms));
+	/** In game ticks of {@code world}, around {@code scene}. */
+	static LiveTest inGameTime(ServerLevel world, Checks.Challenge scene) {
+		return new LiveTest(world, scene, GAME_SETTLE_TICKS, GAME_SETTLE_MS);
+	}
+
+	/** First checks {@code ok} (failing with {@code why}), then does {@code act}, then waits {@code pause} (ticks or ms). */
+	LiveTest then(@Nullable BooleanSupplier ok, @Nullable Supplier<Component> why, @Nullable Runnable act, long pause) {
+		beats.add(new Beat(ok, why, act, pause));
 		return this;
 	}
 
@@ -64,11 +102,12 @@ final class LiveTest implements Checks.Challenge {
 
 	/** One tick of the test; {@code true} when it is over, passed or not. */
 	boolean tick() {
-		long now = System.currentTimeMillis();
+		long now = world != null ? world.getGameTime() : System.currentTimeMillis();
 		if (next < 0) {
-			next = now + SETTLE_MS;
+			next = now + settle;
+			settled = System.currentTimeMillis() + settleMs;
 		}
-		while (!passed && failure == null && now >= next) {
+		while (!passed && failure == null && now >= next && (beat > 0 || System.currentTimeMillis() >= settled)) {
 			Beat current = beats.get(beat);
 			if (current.ok() != null && !current.ok().getAsBoolean()) {
 				failure = current.why().get();
@@ -77,9 +116,13 @@ final class LiveTest implements Checks.Challenge {
 			if (current.act() != null) {
 				current.act().run();
 			}
-			next = now + current.ms();
+			next = now + current.pause();
 			if (++beat == beats.size()) {
 				passed = true;
+			}
+			if (world != null) {
+				// In game time, one beat per tick: what MINE did reaches the world first.
+				break;
 			}
 		}
 		return passed || failure != null;
@@ -110,35 +153,35 @@ final class LiveTest implements Checks.Challenge {
 	 * What the live checks share: a test made when the program starts, run while it runs (MINE
 	 * then stops it), passed if every beat was.
 	 */
-	abstract static class Check implements io.github.francescolv.mine.lesson.Check {
+	interface Check extends io.github.francescolv.mine.lesson.Check {
 
 		/** The test for this program; or, when there's no room for its scene, what to say instead. */
-		abstract Object test(AgentProgram program);
+		Object test(AgentProgram program);
 
 		@Override
-		public Object start(AgentProgram program) {
+		default Object start(AgentProgram program) {
 			return test(program);
 		}
 
 		@Override
-		public boolean watch(AgentProgram program, @Nullable Object memo) {
+		default boolean watch(AgentProgram program, @Nullable Object memo) {
 			return !(memo instanceof LiveTest test) || test.tick();
 		}
 
 		@Override
-		public boolean passed(AgentProgram program, @Nullable Object memo) {
+		default boolean passed(AgentProgram program, @Nullable Object memo) {
 			return memo instanceof LiveTest test && test.passed;
 		}
 
 		@Override
-		public void ended(AgentProgram program, @Nullable Object memo, boolean passed) {
+		default void ended(AgentProgram program, @Nullable Object memo, boolean passed) {
 			if (memo instanceof LiveTest test) {
 				test.remove();
 			}
 		}
 
 		@Override
-		public @Nullable Component whyNot(AgentProgram program, @Nullable Object memo) {
+		default @Nullable Component whyNot(AgentProgram program, @Nullable Object memo) {
 			if (memo instanceof LiveTest test && test.failure != null) {
 				return test.failure;
 			}

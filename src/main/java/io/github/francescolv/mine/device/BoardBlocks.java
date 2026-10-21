@@ -132,8 +132,6 @@ public final class BoardBlocks {
 			return;
 		}
 		if (!ServerPlayNetworking.canSend(server, DevicePayloads.BlockOpen.ID)) {
-			server.sendSystemMessage(Component.translatableWithFallback("mine.board_block.info", "Board of %s, key «%s»",
-					entity.ownerName.isEmpty() ? "-" : entity.ownerName, entity.key));
 			return;
 		}
 		BlockState state = entity.getBlockState();

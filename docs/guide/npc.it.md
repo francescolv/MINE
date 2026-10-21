@@ -31,7 +31,7 @@ pagine del tuo libro."*
 
 ### Con un libro e penna
 
-Lo stesso funziona con un libro, anche in un gioco senza MINE:
+Lo stesso funziona con un libro:
 
 1. Prendi un **libro e penna** dall'inventario della modalità creativa (tasto `E`). Tienilo in mano
    e fai **tasto destro in aria**, non sull'NPC, per aprirlo e scriverci dentro. **Ogni pagina è
@@ -131,10 +131,9 @@ la pagina lo mostra con ⚠.
 
 Gli studenti cliccano l'NPC col tasto destro: il suo dialogo si apre in una **finestra a forma
 di libro**, con il nome dell'NPC in cima, le frecce del libro per sfogliare le pagine, e i
-pulsanti da cliccare col mouse. Nel loro inventario non viene aggiunto niente, e non devono
-installare niente: un NPC è un abitante del villaggio di Minecraft, e il dialogo sta sul server. Solo una cosa richiede MINE nel gioco dello studente (il modpack
-di MINE): dopo aver risposto a una domanda, il libro si riapre **sulla stessa pagina**. Senza,
-il libro si riapre partendo da quella pagina, e le pagine precedenti non si possono rileggere.
+pulsanti da cliccare col mouse. Nel loro inventario non viene aggiunto niente: un NPC è un
+abitante del villaggio di Minecraft, e il dialogo sta sul server. Dopo aver risposto a una
+domanda, il libro si riapre **sulla stessa pagina**.
 
 ## Risultati dei quiz
 

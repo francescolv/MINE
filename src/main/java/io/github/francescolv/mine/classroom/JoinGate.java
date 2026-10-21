@@ -3,7 +3,6 @@ package io.github.francescolv.mine.classroom;
 import com.mojang.authlib.GameProfile;
 import io.github.francescolv.mine.MineMod;
 import io.github.francescolv.mine.lab.Lab;
-import io.github.francescolv.mine.mixin.ServerConfigurationNetworkHandlerAccessor;
 import io.github.francescolv.mine.world.ClassWorlds;
 import net.fabricmc.fabric.api.networking.v1.ServerConfigurationConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerConfigurationNetworking;
@@ -91,11 +90,10 @@ public final class JoinGate {
 		ClassCode.tried(server, profile);
 		if (ClassCode.triesLeft(profile.id()) == 0) {
 			handler.disconnect(ClassTexts.tooMany());
-		} else if (ServerConfigurationNetworking.canSend(handler, ClassCodePayloads.Ask.ID)) {
+		} else {
+			// VersionCheck already turned away games without MINE: this one can type the code.
 			TYPING.add(profile.id());
 			handler.addTask(new TypeCode(ClassCode.triesLeft(profile.id())));
-		} else {
-			handler.disconnect(ClassTexts.noMine());
 		}
 	}
 
@@ -158,7 +156,7 @@ public final class JoinGate {
 	}
 
 	private static GameProfile profile(ServerConfigurationPacketListenerImpl handler) {
-		return ((ServerConfigurationNetworkHandlerAccessor) handler).mine$getProfile();
+		return handler.getOwner();
 	}
 
 	/** Joining waits here until the student types the right code. */

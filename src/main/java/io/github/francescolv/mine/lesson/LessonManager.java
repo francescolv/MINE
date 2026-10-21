@@ -33,7 +33,7 @@ public final class LessonManager {
 	}
 
 	/** A challenge built as soon as a step began, in front of the Agent, waiting for its first program. */
-	private record Preview(String lesson, int step, AgentManager.Placement at, Checks.Challenge challenge, Object memo) {
+	private record Preview(String lesson, int step, AgentManager.Placement at, Checks.Challenge challenge) {
 	}
 
 	/** By student. Only touched on the server thread; lost on restart, like the challenges' memos. */
@@ -149,7 +149,7 @@ public final class LessonManager {
 		}
 		Object memo = lesson.steps().get(step).check().prepare(agent.world(), agent.pos(), agent.facing());
 		if (memo instanceof Checks.Challenge challenge) {
-			PREVIEWS.put(owner, new Preview(lesson.id(), step, agent, challenge, memo));
+			PREVIEWS.put(owner, new Preview(lesson.id(), step, agent, challenge));
 		}
 	}
 
@@ -163,25 +163,19 @@ public final class LessonManager {
 	/** The next hint for the current step, or {@code null} if there are no more (or no lesson). */
 	@Nullable
 	public static Component nextHint(ServerPlayer student) {
-		return nextHint(student, false);
+		return nextHint(student, Lesson.Language.LUA);
 	}
 
 	/**
-	 * Reveals the next hint of the student's step, in the blocks' words if {@code blocks} (the
-	 * block editor asks); {@code null} if there are no more. Lua and block hints are counted
-	 * together: hint 2 is the second one in either words.
+	 * Reveals the next hint of the student's step, in {@code language}'s words (the block editor
+	 * and the Python page ask in theirs); {@code null} if there are no more. Hints are counted
+	 * together: hint 2 is the second one in any words.
 	 */
-	@Nullable
-	public static Component nextHint(ServerPlayer student, boolean blocks) {
-		return nextHint(student, blocks ? Lesson.Language.BLOCKS : Lesson.Language.LUA);
-	}
-
-	/** As {@link #nextHint(ServerPlayer, boolean)}, in {@code language}'s words. */
 	@Nullable
 	public static Component nextHint(ServerPlayer student, Lesson.Language language) {
 		LessonProgress progress = LessonProgress.get(student.level().getServer());
 		LessonProgress.Entry entry = progress.get(student.getUUID());
-		Lesson lesson = current(student.level().getServer(), student.getUUID());
+		Lesson lesson = current(entry);
 		if (lesson == null || entry.status() != LessonProgress.Status.IN_PROGRESS) {
 			return null;
 		}
@@ -197,7 +191,12 @@ public final class LessonManager {
 	/** The lesson the student has started (in progress or completed), if it still exists. */
 	@Nullable
 	public static Lesson current(MinecraftServer server, UUID student) {
-		LessonProgress.Entry entry = LessonProgress.get(server).get(student);
+		return current(LessonProgress.get(server).get(student));
+	}
+
+	/** The lesson of a student's progress entry ({@code null}: none). */
+	@Nullable
+	public static Lesson current(@Nullable LessonProgress.Entry entry) {
 		return entry == null ? null : Lessons.get(entry.lesson());
 	}
 
@@ -211,7 +210,7 @@ public final class LessonManager {
 			Container inventory, int selectedSlot) {
 		LessonProgress progress = LessonProgress.get(server);
 		LessonProgress.Entry entry = progress.get(owner);
-		Lesson lesson = current(server, owner);
+		Lesson lesson = current(entry);
 		if (lesson == null || entry.status() != LessonProgress.Status.IN_PROGRESS) {
 			return null;
 		}
@@ -243,7 +242,7 @@ public final class LessonManager {
 	@Nullable
 	private static Component statusLine(MinecraftServer server, UUID owner) {
 		LessonProgress.Entry entry = LessonProgress.get(server).get(owner);
-		Lesson lesson = current(server, owner);
+		Lesson lesson = current(entry);
 		if (lesson == null) {
 			return null;
 		}
@@ -284,7 +283,7 @@ public final class LessonManager {
 	private static void started(AgentProgram program) {
 		MinecraftServer server = program.world().getServer();
 		LessonProgress.Entry entry = LessonProgress.get(server).get(program.owner());
-		Lesson lesson = current(server, program.owner());
+		Lesson lesson = current(entry);
 		if (lesson == null || entry.status() != LessonProgress.Status.IN_PROGRESS) {
 			return;
 		}
@@ -295,7 +294,7 @@ public final class LessonManager {
 		if (preview != null && preview.lesson().equals(lesson.id()) && preview.step() == entry.step()
 				&& preview.at().world() == program.world() && preview.at().pos().equals(program.startPos())
 				&& preview.at().facing() == program.startFacing() && preview.challenge().untouched()) {
-			memo = preview.memo();
+			memo = preview.challenge();
 			check.reuse(program, memo);
 		} else {
 			if (preview != null) {
@@ -350,13 +349,11 @@ public final class LessonManager {
 
 		boolean last = entry.step() + 1 == lesson.steps().size();
 		progress.put(program.owner(), last ? entry.completed(System.currentTimeMillis()) : entry.nextStep());
-		if (!last) {
-			preview(program.owner(), lesson, entry.step() + 1,
-					new AgentManager.Placement(program.world(), program.pos(), program.facing()));
-		}
 		if (last) {
 			LessonFeedback.completed(program, student, lesson);
 		} else {
+			preview(program.owner(), lesson, entry.step() + 1,
+					new AgentManager.Placement(program.world(), program.pos(), program.facing()));
 			LessonFeedback.stepDone(program, student, lesson, entry.step() + 1);
 		}
 		if (student != null) {

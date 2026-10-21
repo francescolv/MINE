@@ -194,12 +194,4 @@ public final class PortfolioExport {
 		return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;");
 	}
 
-	/** Saves the export in the world's {@code mine/exports} folder too, and returns where. */
-	public static Path save(MinecraftServer server, String fileName, byte[] zip) throws IOException {
-		Path folder = server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT).resolve("mine").resolve("exports");
-		Files.createDirectories(folder);
-		Path file = folder.resolve(fileName);
-		Files.write(file, zip);
-		return file.normalize();
-	}
 }

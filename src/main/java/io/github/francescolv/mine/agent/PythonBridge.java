@@ -71,11 +71,19 @@ public final class PythonBridge {
 
 	/** The bridge's Lua, sent to Byte as the program {@code name}. */
 	public static String bridge(String name) {
-		try (InputStream in = PythonBridge.class.getResourceAsStream("/web/python/bridge.lua")) {
-			return new String(Objects.requireNonNull(in, "bridge.lua").readAllBytes(), StandardCharsets.UTF_8)
-					.replace("%NAME%", name);
-		} catch (IOException e) {
-			throw new UncheckedIOException(e);
+		return BridgeLua.TEXT.replace("%NAME%", name);
+	}
+
+	/** bridge.lua, read from MINE's jar the first time it's needed. */
+	private static final class BridgeLua {
+		static final String TEXT = read();
+
+		private static String read() {
+			try (InputStream in = PythonBridge.class.getResourceAsStream("/web/python/bridge.lua")) {
+				return new String(Objects.requireNonNull(in, "bridge.lua").readAllBytes(), StandardCharsets.UTF_8);
+			} catch (IOException e) {
+				throw new UncheckedIOException(e);
+			}
 		}
 	}
 

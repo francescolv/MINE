@@ -1,10 +1,18 @@
 package io.github.francescolv.mine;
 
 import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.Dynamic;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtOps;
+import net.minecraft.resources.FileToIdConverter;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.packs.resources.Resource;
+import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.util.datafix.DataFixTypes;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
@@ -12,10 +20,13 @@ import net.minecraft.world.level.storage.LevelResource;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.io.Reader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -42,6 +53,28 @@ public final class DataFormat {
 	private static final List<String> SAVED_NAMES = new ArrayList<>();
 
 	private DataFormat() {
+	}
+
+	/**
+	 * Reads each JSON file {@code finder} finds in the datapacks and hands it to {@code use}. A file
+	 * that can't be read, or is in a newer format, is skipped with a warning in the server log
+	 * naming it as a {@code what}: a typo in a teacher's file must not stop the others from working.
+	 */
+	public static void loadJson(ResourceManager manager, FileToIdConverter finder, String what, BiConsumer<Identifier, JsonElement> use) {
+		for (Map.Entry<Identifier, Resource> file : finder.listMatchingResources(manager).entrySet()) {
+			Identifier id = finder.fileToId(file.getKey());
+			try (Reader reader = file.getValue().openAsReader()) {
+				JsonElement json = JsonParser.parseReader(reader);
+				String tooNew = tooNew(json);
+				if (tooNew != null) {
+					MineMod.LOGGER.warn("[MINE] Skipping {} {}: {}", what, id, tooNew);
+					continue;
+				}
+				use.accept(id, json);
+			} catch (Exception e) {
+				MineMod.LOGGER.warn("[MINE] Skipping {} {}: {}", what, id, e.getMessage());
+			}
+		}
 	}
 
 	public static void register() {
@@ -92,6 +125,48 @@ public final class DataFormat {
 			}
 		}
 		return null;
+	}
+
+	/**
+	 * The entries of the list {@code key} in saved data, each read with {@code codec}. An entry that
+	 * can't be read is left out, with a warning naming it as one of {@code what}: the others stay.
+	 */
+	public static <T> List<T> readList(CompoundTag nbt, String key, Codec<T> codec, String what) {
+		List<T> entries = new ArrayList<>();
+		ListTag list = nbt.getListOrEmpty(key);
+		for (int i = 0; i < list.size(); i++) {
+			int index = i;
+			codec.parse(NbtOps.INSTANCE, list.get(i))
+					.ifSuccess(entries::add)
+					.ifError(error -> MineMod.LOGGER.warn("[MINE] Skipping {} number {} of the saved data: {}", what, index + 1, error.message()));
+		}
+		return entries;
+	}
+
+	/**
+	 * A list in saved data, inside an entry of another list: as {@link #readList}, an element that
+	 * can't be read is left out, with a warning naming it as one of {@code what}.
+	 */
+	public static <T> Codec<List<T>> lenientList(Codec<T> codec, String what) {
+		return Codec.PASSTHROUGH.listOf().xmap(elements -> {
+			List<T> entries = new ArrayList<>();
+			for (Dynamic<?> element : elements) {
+				codec.parse(element)
+						.ifSuccess(entries::add)
+						.ifError(error -> MineMod.LOGGER.warn("[MINE] Skipping a {} of the saved data: {}", what, error.message()));
+			}
+			return entries;
+		}, entries -> entries.stream().<Dynamic<?>>map(entry -> new Dynamic<>(NbtOps.INSTANCE,
+				codec.encodeStart(NbtOps.INSTANCE, entry).getOrThrow())).toList());
+	}
+
+	/** Saves {@code entries} as the list {@code key}, each written with {@code codec}. */
+	public static <T> void writeList(CompoundTag nbt, String key, Codec<T> codec, Iterable<T> entries) {
+		ListTag list = new ListTag();
+		for (T entry : entries) {
+			list.add(codec.encodeStart(NbtOps.INSTANCE, entry).getOrThrow());
+		}
+		nbt.put(key, list);
 	}
 
 	/** Marks saved data with its format. */

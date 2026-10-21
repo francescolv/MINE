@@ -41,7 +41,7 @@ public class MineMod implements ModInitializer {
 	public void onInitialize() {
 		LOGGER.info("[MINE] Mine Is Not Education — core initialisation started.");
 
-		if (FabricLoader.getInstance().isModLoaded(AgentManager.CC_MOD_ID)) {
+		if (AgentManager.CC_LOADED) {
 			CcTweakedDefaults.apply();
 		}
 		DataFormat.register();

@@ -4,8 +4,8 @@
 
 Le lavagne mostrano testo grande nel mondo, come le lavagne di Minecraft Education: il titolo di
 un'attività, le istruzioni, le regole del laboratorio, un pezzo di codice da ricordare. Come gli
-NPC, le scrivi **nel gioco**, in un libro e penna. Gli studenti non devono installare niente: una
-lavagna è fatta con i display di testo di Minecraft.
+NPC, le scrivi **nel gioco**, in un libro e penna. Una lavagna è fatta con i display di testo di
+Minecraft.
 
 ## Creare una lavagna
 
@@ -32,7 +32,7 @@ Chiedi prima di usare la TNT.
 Divertiti!
 ```
 
-Funziona allo stesso modo con un **libro e penna**, anche in un gioco senza MINE: scrivi il testo
+Funziona allo stesso modo con un **libro e penna**: scrivi il testo
 nel libro (tienilo in mano e fai tasto destro in aria per aprirlo), poi clicca col tasto destro il
 **centro** della lavagna tenendolo. Per avere il testo della lavagna in un libro,
 **accovacciati e cliccala col tasto destro a mano vuota**.

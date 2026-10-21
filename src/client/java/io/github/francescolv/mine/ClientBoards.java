@@ -51,7 +51,7 @@ public final class ClientBoards {
 			List<FormattedCharSequence> lines = client.font.split(display.getText(), display.getLineWidth());
 			int width = lines.stream().mapToInt(client.font::width).max().orElse(0);
 			double at = BoardHit.distance(eye, look, display.position(), display.getYRot(),
-					entity.getAttachedOrElse(BoardManager.SIZE, 1f), width, lines.size(), nearest);
+					entity.getAttachedOrElse(BoardManager.SIZE, BoardManager.DEFAULT_SIZE), width, lines.size(), nearest);
 			if (at > 0) {
 				nearest = at;
 				clicked = (Interaction) entity;

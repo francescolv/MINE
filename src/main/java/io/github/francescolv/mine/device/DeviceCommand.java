@@ -33,7 +33,7 @@ public final class DeviceCommand {
 					.withStyle(ChatFormatting.GREEN), false);
 			if (program != null) {
 				source.sendSuccess(() -> Component.translatableWithFallback("mine.device.program_started",
-						"Your board runs %s", program.toString()), false);
+						"Your board is running %s", program.toString()), false);
 			}
 			return 1;
 		}
