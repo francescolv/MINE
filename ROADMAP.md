@@ -32,6 +32,9 @@ Before every new feature we ask one question:
 - [ ] Windows lab PCs: COM ports, and MakeCode's WebUSB download while MINE has the port open
 - [ ] `/mine device`: the window shows only boards on a cable; one on Wi-Fi is told in the chat,
   it could show its values live too
+- [ ] micro:bit without a cable: its Bluetooth UART, so a micro:bit on batteries talks with
+  Byte like one on USB (no second micro:bit as a radio bridge); pairing in a lab of 25, and
+  MakeCode's Bluetooth extension turns the radio off
 - [ ] Raspberry Pi Zero 2 W: GPIO with Python, as a board over the network
 - [ ] Raspberry Pi 5: as a lab PC, and as the class server
 - [ ] Linux lab notes for more distributions (serial ports and the `dialout` group: Ubuntu,
